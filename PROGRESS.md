@@ -78,32 +78,74 @@ Latin-1 bytes) and would do the same on any future INDEX-derived file. Use
 
 ---
 
+## Round 2 — 2026-08-06 · Schema + migration runner
+
+**Done:**
+
+- **P1.2** — Schema DDL in `crates/bam-core/migrations/0001_initial.sql`
+  (all five tables, verbatim from the phase doc), with the Rust side —
+  `Connection`-touching code, structs, insert/get functions — confined to
+  `crates/bam-core/src/store/` per invariant I1, and the whole module gated
+  `#[cfg(feature = "native")]` so `--no-default-features` wasm32 builds still
+  compile with it absent. `store::tables` holds one struct plus
+  insert/get pair per table (`LandingIndexLine`, `Package`, `Enrichment`,
+  `Selection`, `SelectionMember`); insert takes `&T` and ignores the `id`
+  field rather than adding a parallel `NewT` type per table. Five tests in
+  `tests/store.rs`, one per acceptance bullet (not one per table) — round trip
+  across all five tables in a single test, then unique-constraint,
+  cascade-delete, drop/recreate-independence, and BLOB-fidelity as their own
+  tests.
+- **P1.3** — Migration runner in `crates/bam-core/src/store/migrations.rs`:
+  a `const MIGRATIONS: &[Migration]` built with `include_str!`, applied in a
+  loop keyed on `PRAGMA user_version` — no `refinery`/`sqlx-migrate`, per the
+  plan's own steer. `store::open(path)` opens the connection, turns on
+  `PRAGMA foreign_keys`, and applies migrations in one call; `":memory:"`
+  works as `path` since `rusqlite::Connection::open` special-cases it, so no
+  separate `open_in_memory()` was needed. Three tests in `tests/migrations.rs`.
+  The "DB at version N only runs migrations > N" test needed a way to prove a
+  no-op without a second real migration to peek at yet — it stamps
+  `user_version = 1` on a table-less DB and asserts `apply_migrations` leaves
+  it table-less, rather than asserting on a version number alone.
+
+All eight new tests pass, plus the two pre-existing ones (purity, wasm32
+`--no-default-features` check). `cargo fmt --check` and `cargo clippy
+--workspace --all-targets -- -D warnings` both clean.
+
+**Deviation for the next session to know about:** P1.2's "Round-trip
+insert/select on each of the five tables" bullet was implemented as *one*
+test exercising all five tables, not five separate tests — the task's "Done
+when: the five tests pass" refers to the five acceptance bullets, and reading
+it as five-tests-per-table would silently inflate the count to nine.
+
+---
+
 ## Next task
 
-**Round 2 — P1.2–P1.3** (Opus + Haiku tier).
+**Round 3 — P1.4–P1.5** (Sonnet tier).
 See [phase-1-ingest.md](docs/plan/phase-1-ingest.md) for the full task
 entries.
 
-1. **P1.2** (Opus) — Schema: `landing_index_line`, `package`, `enrichment`,
-   `selection`/`selection_member`. All DDL under
-   `crates/bam-core/src/store/` (invariant I1). Three decisions that must not
-   get smoothed away: `landing_index_line.raw` is **BLOB, not TEXT**;
-   `package.date_precision` (`'week'|'exact'`, upgrade-only one-directional);
-   `enrichment` cascades on package delete but survives re-derivation of
-   `package` from `landing_index_line`. Hand over: `bam-handoff.md` §5.1,
-   §5.2, §13's encoding paragraph; invariants I1 and I7; the P1.1 fixture.
-2. **P1.3** (Haiku) — Migration runner: numbered `.sql` files under
-   `crates/bam-core/migrations/`, applied via SQLite's `user_version` pragma,
-   embedded with `include_str!`. No down-migrations. Skip `refinery` /
-   `sqlx-migrate` — a loop over embedded files is shorter.
+1. **P1.4** — INDEX line parser: `parse_index_line(raw: &[u8]) ->
+   Result<IndexRecord<'_>, ParseError>` in `crates/bam-core/src/ingest/index.rs`.
+   Column-aligned (offsets derived from the header row), not
+   whitespace-delimited. Returns borrowed byte ranges — decoding is P1.5, kept
+   separate so the landing layer keeps the original bytes. Hand over: the
+   P1.1 fixture, the `IndexRecord` field list (file, dir, size, age,
+   description), the column-offsets-not-whitespace constraint, the borrow
+   requirement.
+2. **P1.5** — Charset decode helper: `decode(bytes: &[u8]) -> (String,
+   &'static Encoding)`, `chardetng` to detect + `encoding_rs` to decode,
+   defaulting to ISO-8859-1 on low-confidence detection. One code path for
+   both ISO-8859-1 and UTF-8 input — no input-specific branch. Hand over:
+   §13's encoding paragraph, the signature, the ISO-8859-1 default, the note
+   that `chardetng` wants full text rather than a prefix.
 
-**Round 2 ends when** the five P1.2 tests pass against a fresh database
-(round-trip insert/select on all five tables, `UNIQUE(dir, file)` rejected
-duplicate, cascade-on-delete with `PRAGMA foreign_keys = ON`, `package`
-droppable/rebuildable without touching `landing_index_line`, BLOB round-trips
-invalid UTF-8 byte-identically) and the three P1.3 tests pass (fresh DB gets
-every table, re-applying is a no-op, a DB at version N only runs migrations >
-N).
+**Round 3 ends when** P1.4's tests pass (every fixture line parses; one named
+test per P1.1 awkward case — long filename, internal whitespace runs,
+non-ASCII bytes, zero-size entry, skipped preamble; truncated line yields
+`ParseError` not a panic) and P1.5's four tests pass (ISO-8859-1 `ö` decodes
+correctly, UTF-8 decodes correctly, same code path for both, ambiguous short
+input falls back to ISO-8859-1 and reports that label).
 
 ---
 
