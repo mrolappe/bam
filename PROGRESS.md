@@ -610,15 +610,57 @@ progress output.
 
 ---
 
+## Round 10 — 2026-08-06 · `in:`/`marked` reconciliation (P2.8) — Phase 2 exit
+
+**Done:**
+
+- **P2.8** — Confirmed, by reading `query/registry.rs`, `store/compile.rs`, and
+  `query/bam_dsl.rs` before touching anything, that Round 8/9's deviation note
+  was right: `InSelection` is its own `Predicate` variant, the parser already
+  parses `in:'x'`/`marked` straight to it, and the compiler already compiles
+  it independent of `FieldRegistry`. There is nothing to add to the registry —
+  P2.8's literal task text ("add two entries to the field registry") doesn't
+  apply, and adding stub entries anyway would misrepresent how resolution
+  actually works. Two of the task's three test bullets were already true and
+  already covered (`tests/store_compile.rs::worked_examples_compile_and_return_expected_ids`
+  exercises both `in:'tracker candidates'` and `marked !size<10k`). The third
+  wasn't: `in:'nonexistent'` didn't error, it silently compiled to an `EXISTS`
+  subquery that matches zero rows — `store::compile::compile` has no
+  `Connection` to check existence with. Fixed by adding
+  `Session::check_named_selections_exist` (`store/session.rs`), a small
+  recursive walk over the predicate tree run once in `matching_ids` (shared by
+  `search_packages` and `select_by_query`, so both routes get the check
+  without duplicating it), erroring with the existing `SessionError::
+  UnknownSelection` the same way `load` already does for the same condition.
+  One new test, `tests/api_selection.rs::in_selection_naming_an_unknown_selection_errors`.
+  The task's own acceptance criterion — "no file under `query/lang/` and no
+  file in the compiler is modified" — holds: the fix lives in `store/
+  session.rs`, the session layer, not the parser or `store/compile.rs`.
+
+69 tests total (1 new + 68 pre-existing — Round 9's own "69 tests total" was
+itself off by one; verified here directly with `git stash`/`cargo test`
+rather than trusted). `cargo fmt --check`, `cargo clippy --workspace
+--all-targets -- -D warnings`, and the wasm32 `--no-default-features` check
+all clean.
+
+**Deviations for the next session to know about:**
+- P2.8 turned out to be exactly the smaller pass Round 8's deviation note
+  predicted, not the two-registry-entry task the phase doc describes.
+- Round 9's stated test count ("69 tests total") was off by one (actual
+  pre-existing count was 68) — no code discrepancy, just a miscount in that
+  round's own report. Noted in case a future round's running total looks off
+  by one again.
+
+**Phase 2 exit reached.**
+
+---
+
 ## Next task
 
-**P2.8** — register `in:`/`marked` as query fields. Per Round 8's deviation
-note, P2.1 (Round 7) already made `InSelection` its own `Predicate` variant
-and P2.5 (Round 8) already compiles it directly, independent of
-`FieldRegistry` — check what P2.8's task text actually still needs to add
-(if anything) before implementing it literally; it may be a smaller
-reconciliation pass rather than new registry entries. See
-[phase-2-query-core.md](docs/plan/phase-2-query-core.md).
+**P3.1** — input model: `docs/input-model.md` plus the types in
+`crates/bam-tui/src/input/mod.rs`. Invariant I6 — a `[count][operator]
+{motion|object|command}` resolver, v1 registering motions only. See
+[phase-3-tui.md](docs/plan/phase-3-tui.md).
 
 ---
 

@@ -26,7 +26,7 @@ use super::tables::{self, Package, Selection};
 use crate::cancel::CancellationToken;
 use crate::http::HttpClient;
 use crate::progress::{OperationId, Outcome, ProgressEvent, ProgressSink};
-use crate::query::ir::Predicate;
+use crate::query::ir::{Predicate, SelectionRef};
 use crate::query::registry::{FieldRegistry, package_fields};
 
 #[derive(Debug, Error)]
@@ -125,12 +125,37 @@ impl Session {
     }
 
     fn matching_ids(&self, pred: &Predicate) -> Result<Vec<i64>, SessionError> {
+        self.check_named_selections_exist(pred)?;
         let compiled = compile::compile(pred, &self.registry, Some(self.working_selection_id))?;
         let mut stmt = self.conn.prepare(&compiled.sql)?;
         let ids = stmt
             .query_map(params_from_iter(compiled.params.iter()), |r| r.get(0))?
             .collect::<Result<_, _>>()?;
         Ok(ids)
+    }
+
+    /// `compile::compile` has no `Connection`, so a `in:'name'` for a
+    /// selection that doesn't exist would otherwise just compile to an
+    /// `EXISTS` clause matching nothing — silently returning zero results
+    /// instead of erroring (P2.8). The existence check belongs here, the
+    /// one place that has both the predicate tree and a connection.
+    fn check_named_selections_exist(&self, pred: &Predicate) -> Result<(), SessionError> {
+        match pred {
+            Predicate::And(parts) | Predicate::Or(parts) => parts
+                .iter()
+                .try_for_each(|p| self.check_named_selections_exist(p)),
+            Predicate::Not(inner) => self.check_named_selections_exist(inner),
+            Predicate::InSelection(SelectionRef::Named(name)) => self
+                .conn
+                .query_row(
+                    "SELECT 1 FROM selection WHERE name = ?1",
+                    params![name],
+                    |_| Ok(()),
+                )
+                .optional()?
+                .ok_or_else(|| SessionError::UnknownSelection(name.clone())),
+            _ => Ok(()),
+        }
     }
 
     // ---- selections (P2.7, invariant I7) ----

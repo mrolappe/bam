@@ -5,8 +5,8 @@
 use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 
-use bam_core::query::ir::{CmpOp, FieldId, Predicate, Value};
-use bam_core::store::session::{SelectionMode, Session};
+use bam_core::query::ir::{CmpOp, FieldId, Predicate, SelectionRef, Value};
+use bam_core::store::session::{SelectionMode, Session, SessionError};
 use bam_core::store::tables::{self, LandingIndexLine, Package};
 
 fn temp_db_path(label: &str) -> PathBuf {
@@ -198,6 +198,24 @@ fn an_ephemeral_selection_is_cleaned_up_on_session_end_a_named_one_is_not() {
         )
         .unwrap();
     assert_eq!(named_rows, 1);
+
+    let _ = std::fs::remove_file(&path);
+}
+
+#[test]
+fn in_selection_naming_an_unknown_selection_errors() {
+    let path = temp_db_path("unknown-in");
+    seed(&path, 1, "mods/a", "mods/b");
+    let session = Session::open(&path).unwrap();
+
+    let pred = Predicate::InSelection(SelectionRef::Named("nonexistent".into()));
+    let err = session
+        .select_by_query(&pred, SelectionMode::Replace)
+        .unwrap_err();
+    assert!(
+        matches!(&err, SessionError::UnknownSelection(name) if name == "nonexistent"),
+        "got: {err:?}"
+    );
 
     let _ = std::fs::remove_file(&path);
 }
