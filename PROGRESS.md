@@ -186,31 +186,95 @@ bam-core --no-default-features --target wasm32-unknown-unknown` all clean.
 
 ---
 
+## Round 4 — 2026-08-06 · Normalizer + size/version test tables
+
+**Done:**
+
+- **P1.6** — Pure derivation functions in
+  `crates/bam-core/src/ingest/normalize.rs` (no `rusqlite`, so no `native`
+  gate needed — confirmed by the wasm32 check): `parse_size_bytes` (K/M
+  suffix, base 1024), `split_name_version` (splits on the *last* `-` only
+  when what follows starts with an ASCII digit — Aminet's convention — else
+  the whole stem is the name; naturally gives `Mod.Foo.lha` → `(Mod.Foo,
+  NULL)` with no directory-awareness needed, since a bare `.` next to no
+  dash never looks like a version split point), and `date_from_age_weeks`
+  (age-in-weeks + `fetched_at` → ISO date). No date/calendar crate existed in
+  the workspace and this is pure computation the wasm32 build must keep
+  compiling, so date math is Howard Hinnant's `days_from_civil` /
+  `civil_from_days` (public domain, ~20 lines) rather than adding a
+  dependency for arithmetic this size. `normalize_line` combines these with
+  P1.4's parser and P1.5's decoder into one landing-row → `NewPackage` step.
+  The database half — `normalize(conn)` in `crates/bam-core/src/store/normalize.rs`
+  — reads all `landing_index_line` rows, does a full `DELETE FROM package`
+  then reinserts in landing order via `INSERT OR IGNORE` (so a `(dir, file)`
+  collision keeps the first-seen row rather than erroring the whole rebuild —
+  the real fixture has two: `WorldDATA.lha` and `agendafr.lha`, both in
+  `biz/dbase`, artifacts of P1.1's curation splicing extra lines in). This is
+  a full rebuild, not an upsert: it satisfies P1.6's own two DB tests, but
+  does *not* by itself preserve `package.id` (and hence FK-linked
+  `enrichment`) across a rebuild against a live DB — the phase doc's own text
+  for P1.8 ("the new parts are the upsert and the change report") confirms
+  that id-preserving upsert-by-`(dir, file)` is P1.8's job, layered on top of
+  these same pure functions, not something P1.6 needs to solve. Four tests in
+  `tests/store_normalize.rs` (idempotent, offline-rebuild via the same
+  drop/recreate-`package` pattern as P1.2's store test, every row
+  `date_precision = 'week'`, sane dates at age 0 and the fixture's observed
+  max age of 999 weeks — real Aminet data, confirmed by scanning
+  `index_sample.txt`'s age column).
+- **P1.7** — Table-driven tests in `tests/ingest_normalize.rs`. The phase
+  doc's case list is missing explicit expected values for more cases than it
+  states: none of the six size cases have a `→`, and two of the five version
+  splits (`Foo1.2.lha`, `Foo-2.0beta.lha`) don't either — only `Foo-1.2.lha`,
+  `Foo.lha`, and `Mod.Foo.lha` do. Per Round 3's precedent for a doc/reality
+  mismatch, this is reported rather than silently resolved: the missing
+  values were derived from the doc's own stated rules (K/M-base-1024 for
+  sizes; "ambiguous → whole stem, never guess" for splits) rather than
+  invented — `Foo1.2.lha` has no `-` at all, so it's unambiguously the
+  ambiguous case → `(Foo1.2, NULL)`; `Foo-2.0beta.lha`'s suffix after the
+  last `-` starts with a digit, so it splits → `(Foo, 2.0beta)`. Flagged here
+  for a human check rather than assumed correct.
+
+All 25 tests pass (6 new + 19 pre-existing). `cargo fmt --check`, `cargo
+clippy --workspace --all-targets -- -D warnings`, and the wasm32
+`--no-default-features` check all clean.
+
+**Deviation for the next session to know about:** P0.4's purity test
+(`tests/purity.rs`) does a raw substring scan for the literal text
+`"rusqlite"` in any file outside `src/store/` — it doesn't parse comments
+separately from code. A module-doc comment in `ingest/normalize.rs` that
+*mentioned* `rusqlite` by name (explaining why the DB half lives elsewhere)
+tripped it despite the file having no such dependency. Reworded to avoid the
+literal string. Watch for this in any future `src/` doc comment that
+discusses invariant I1.
+
+---
+
 ## Next task
 
-**Round 4 — P1.6–P1.7** (Sonnet then Haiku tier).
+**Round 5 — P1.8–P1.9** (Sonnet tier both).
 See [phase-1-ingest.md](docs/plan/phase-1-ingest.md) for the full task
 entries.
 
-1. **P1.6** — Normalizer: landing rows → `package` rows, applying P1.4 and
-   P1.5. Derives `size_bytes` from `"134K"`/`"1.2M"` (K/M suffixes, base
-   1024), `uploaded_on` from age-in-weeks plus `fetched_at`
-   (`date_precision = 'week'`), and splits `name`/`version` from the
-   filename — ambiguous split puts the whole stem in `name` and leaves
-   `version` NULL rather than guessing. Hand over: the `package` schema, the
-   three derivation rules, the idempotency requirement (`normalize()` run
-   twice yields identical rows) and the offline-rebuild requirement
-   (drop `package`, re-normalize from `landing_index_line` alone, network
-   unavailable).
-2. **P1.7** — Exhaustive table-driven tests for the two pure functions in
-   P1.6 (size-suffix parse, name/version split), using the exact cases and
-   expected values given in the phase doc. If a case's expected value looks
-   wrong, report it back rather than editing the expectation.
+1. **P1.8** — RECENT-based incremental update. Reuses P1.4's parser and
+   P1.6's pure derivation functions wholesale; the new work is an
+   upsert-by-`(dir, file)` (preserving existing `package.id` so FK-linked
+   `enrichment`/`selection_member` survive — this is where that invariant
+   from P1.2's schema notes actually gets satisfied, deliberately deferred
+   past Round 4) and a changed-package report. Hand over: "same line format
+   as INDEX, reuse the parser", the `(dir, file)` key, the id-stability
+   requirement, `recent_sample.txt`.
+2. **P1.9** — `HttpClient` trait + `reqwest` implementation behind `native`
+   (invariant I1: `bam-core` must not call `reqwest` directly). Fetch
+   `INDEX.gz`/`RECENT.gz`, gunzip, conditional GET via stored `ETag`. Hand
+   over: the trait signature, the two URLs, the `User-Agent` format, "store
+   ETag per URL", the fake-client test requirement, the `#[ignore]`d
+   real-mirror test (never run in CI).
 
-**Round 4 ends when** P1.6's four tests pass (idempotent, offline-rebuildable,
-sane dates at age 0 and the max observed age, every row `date_precision =
-'week'`) and P1.7's table-driven tests pass against the given expected
-values.
+**Round 5 ends when** P1.8's three tests pass (RECENT adds only new rows,
+existing rows and their ids untouched, changed-list matches exactly) and
+P1.9's five tests pass (fake-client full ingest with no network, ETag sent on
+second request, 304 inserts nothing and isn't an error, 500 surfaces as
+`HttpError` not a partial ingest, real-mirror test is `#[ignore]`d).
 
 ---
 

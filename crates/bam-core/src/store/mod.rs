@@ -3,6 +3,7 @@ use std::path::Path;
 use rusqlite::Connection;
 
 mod migrations;
+pub mod normalize;
 pub mod tables;
 
 pub use migrations::apply_migrations;
