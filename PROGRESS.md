@@ -655,12 +655,50 @@ all clean.
 
 ---
 
+## Round 11 — 2026-08-06 · Input model (P3.1) — Phase 3 start
+
+**Done:**
+
+- **P3.1** — `docs/input-model.md` plus `crates/bam-tui/src/input/mod.rs`.
+  Added a `[lib] name = "bam_tui"` target to `bam-tui/Cargo.toml` (it was
+  bin-only) so `tests/` — and later P3.4's UI code — can depend on the input
+  module as a library; `main.rs` is untouched, since v1 doesn't wire the
+  resolver into the app loop yet (that starts at P3.4). `Mode` and `Action`
+  are the phase doc's own sketch verbatim; `ActionKind` is a new type not in
+  the sketch — bindings in `bam.toml` name a count-independent action
+  (`"move_down"`), and only `G` needs the count itself to change *which*
+  `Action` variant comes out (`GoToRow(n)` with a count, `GoBottom` without),
+  so `Resolver` resolves `ActionKind` + `Option<usize>` → `Action` rather
+  than keymap entries pointing at `Action` directly. `Key` (a keypress,
+  decoupled from crossterm/ratatui — neither is a dependency yet, and this
+  module doesn't need one to be tested) and `Keymap` (`HashMap<String,
+  ActionKind>`) both use one canonical string token per key
+  (`Key::Ctrl('d')` → `"ctrl-d"`) as both the `bam.toml` spelling and the
+  resolver's own sequence-matching key, so `gg`-style multi-key bindings need
+  no separate parser — matching is `HashMap` lookup plus a prefix scan for
+  `Pending`. `0` is handled as vim does: a digit that starts a count, unless
+  it's a leading `0` with no count yet pending, in which case it's the
+  `LineStart` binding instead. Four tests in `crates/bam-tui/src/input/
+  mod.rs` (inline `#[cfg(test)]`, matching the module-is-the-artifact framing
+  the phase doc uses elsewhere — not a separate `tests/` file), matching the
+  task's four bullets exactly.
+
+73 tests total (4 new + 69 pre-existing). `cargo fmt --check`, `cargo clippy
+--workspace --all-targets -- -D warnings`, and the wasm32
+`--no-default-features` check (unaffected — `bam-tui` isn't part of it) all
+clean.
+
+**No deviations.**
+
+---
+
 ## Next task
 
-**P3.1** — input model: `docs/input-model.md` plus the types in
-`crates/bam-tui/src/input/mod.rs`. Invariant I6 — a `[count][operator]
-{motion|object|command}` resolver, v1 registering motions only. See
-[phase-3-tui.md](docs/plan/phase-3-tui.md).
+**P3.2** — input resolver state machine: pending state, count accumulation,
+mode transitions, timeout-free, against the five test groups in
+[phase-3-tui.md](docs/plan/phase-3-tui.md) (full binding coverage — `H`/`M`/
+`L`, `ctrl-d/u/f/b`, mode transitions on `v`/`Esc`/`:`/`/` — beyond P3.1's
+four narrower cases).
 
 ---
 

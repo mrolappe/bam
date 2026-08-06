@@ -4,6 +4,10 @@ version = "0.1.0"
 edition.workspace = true
 rust-version.workspace = true
 
+[lib]
+name = "bam_tui"
+path = "src/lib.rs"
+
 [[bin]]
 name = "bam"
 path = "src/main.rs"
@@ -11,3 +15,7 @@ path = "src/main.rs"
 [dependencies]
 bam-core.workspace = true
 tokio.workspace = true
+serde.workspace = true
+
+[dev-dependencies]
+serde_json.workspace = true
