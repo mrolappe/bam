@@ -1,4 +1,6 @@
 use rusqlite::{Connection, OptionalExtension, Result, params};
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct LandingIndexLine {
@@ -34,7 +36,9 @@ pub fn get_landing_index_line(conn: &Connection, id: i64) -> Result<LandingIndex
     )
 }
 
-#[derive(Debug, Clone, PartialEq)]
+/// Also the shape of `bam_core::api`'s package response (P2.6) — reused
+/// rather than duplicated into a separate DTO.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct Package {
     pub id: i64,
     pub dir: String,

@@ -1,7 +1,7 @@
 use std::process::ExitCode;
 
 use bam_core::http::ReqwestClient;
-use bam_core::progress::{Outcome, ProgressEvent, ProgressSink};
+use bam_core::progress::{OperationId, Outcome, ProgressEvent, ProgressSink};
 use bam_core::store;
 use bam_core::store::ingest::{IngestMode, run_ingest};
 
@@ -77,7 +77,7 @@ async fn ingest(flags: &[String]) -> ExitCode {
     let mut sink = CliProgress;
     let fetched_at = bam_core::now_rfc3339();
 
-    match run_ingest(&conn, &client, &mut sink, mode, &fetched_at).await {
+    match run_ingest(&conn, &client, &mut sink, mode, &fetched_at, OperationId(0)).await {
         Ok(outcome) => {
             println!("{} packages", outcome.package_count);
             ExitCode::SUCCESS

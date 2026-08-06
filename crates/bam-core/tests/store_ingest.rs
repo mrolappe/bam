@@ -42,6 +42,7 @@ async fn recording_sink_captures_event_sequence_for_fixture_ingest() {
         &mut sink,
         IngestMode::Offline,
         FETCHED_AT,
+        OperationId(0),
     )
     .await
     .unwrap();
@@ -100,6 +101,7 @@ async fn offline_populates_db_from_fixtures() {
         &mut sink,
         IngestMode::Offline,
         FETCHED_AT,
+        OperationId(0),
     )
     .await
     .unwrap();
@@ -129,6 +131,7 @@ async fn rebuild_normalized_never_touches_the_network() {
         &mut sink,
         IngestMode::RebuildNormalized,
         FETCHED_AT,
+        OperationId(0),
     )
     .await
     .unwrap();

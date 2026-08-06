@@ -4,13 +4,14 @@
 //! wasm32-safe — so the highlight engine, selections, and a future LLM
 //! grammar generator can all consume it without pulling in a database.
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 /// A field name resolved through the [`crate::query::registry::FieldRegistry`].
 /// An owned string, not a `&'static str`: languages parse field names from
 /// arbitrary user input, and a `Predicate` must round-trip through serde
 /// without borrowing from whatever produced it.
-#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Hash, Serialize, Deserialize, JsonSchema)]
 pub struct FieldId(pub String);
 
 impl FieldId {
@@ -19,7 +20,7 @@ impl FieldId {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum CmpOp {
     Eq,
     Ne,
@@ -29,7 +30,7 @@ pub enum CmpOp {
     Ge,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub enum Value {
     Text(String),
     Int(i64),
@@ -38,20 +39,20 @@ pub enum Value {
     Date(String),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum Pattern {
     Glob(String),
     Prefix(String),
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum SelectionRef {
     Named(String),
     /// The current working selection (`marked` in the DSL).
     Marked,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub enum Predicate {
     And(Vec<Predicate>),
     Or(Vec<Predicate>),

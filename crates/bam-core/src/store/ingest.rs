@@ -5,6 +5,8 @@
 //! same events a future web client would consume as JSON.
 
 use rusqlite::Connection;
+use schemars::JsonSchema;
+use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use super::fetch::{FetchError, fetch_and_land};
@@ -20,7 +22,7 @@ pub const INDEX_URL: &str = "https://ftp.fau.de/aminet/INDEX.gz";
 /// call nor a fixture path resolved at runtime.
 const OFFLINE_INDEX_FIXTURE: &[u8] = include_bytes!("../../tests/fixtures/index_sample.txt");
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum IngestMode {
     /// Fetch [`INDEX_URL`] over HTTP, land it, then normalize.
     Fetch,
@@ -80,15 +82,17 @@ async fn land_and_normalize(
 }
 
 /// Runs one ingest per `mode`, reporting `Started`/`Advanced`/`Finished`
-/// through `sink`.
+/// through `sink` under `operation` — caller-assigned (P2.6's `Session`
+/// hands out a fresh, session-unique id; a one-off CLI run can just pass
+/// `OperationId(0)`).
 pub async fn run_ingest(
     conn: &Connection,
     client: &impl HttpClient,
     sink: &mut impl ProgressSink,
     mode: IngestMode,
     fetched_at: &str,
+    operation: OperationId,
 ) -> Result<IngestOutcome, IngestError> {
-    let operation = OperationId(0);
     let total: u64 = if mode == IngestMode::RebuildNormalized {
         1
     } else {

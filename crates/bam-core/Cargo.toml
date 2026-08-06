@@ -11,6 +11,7 @@ native = ["dep:rusqlite", "dep:reqwest", "dep:tokio"]
 [dependencies]
 serde.workspace = true
 serde_json.workspace = true
+schemars.workspace = true
 thiserror.workspace = true
 chardetng.workspace = true
 encoding_rs.workspace = true

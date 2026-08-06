@@ -525,18 +525,100 @@ clippy --workspace --all-targets -- -D warnings`, and the wasm32
 
 ---
 
+## Round 9 — 2026-08-06 · `bam-core::api` use-case layer + selections (P2.6–P2.7)
+
+**Done:**
+
+- **P2.6** — `crates/bam-core/src/store/session.rs` (native-gated, inside
+  `store::` per I1 — see the deviation note below for why the actual
+  session logic lives there and not in `api::`) defines `Session`: one
+  connection, one `FieldRegistry`, an eagerly-created ephemeral *working*
+  selection row (`Drop` deletes it, cascading to its members via P1.2's FK —
+  a named selection, `ephemeral = 0`, outlives the session), and an
+  operation table (`Mutex<HashMap<OperationId, OperationStatus>>`) keyed by
+  a session-local counter. `crates/bam-core/src/api/` (`mod.rs`, `types.rs`,
+  `query.rs`, `selection.rs`, `ingest.rs`) is the thin, serializable-typed
+  layer over it invariant I5 asks for: every request/response type derives
+  `Serialize`/`Deserialize`/`schemars::JsonSchema` (new workspace
+  dependency, ungated — `query::ir::Predicate`, embedded in
+  `SearchPackagesRequest`, lives in the always-wasm-compiled part of the
+  crate, confirmed by the `--no-default-features` wasm32 check still
+  passing). `CancellationToken` is a new ungated `crate::cancel` module
+  (`Arc<AtomicBool>`, two methods) rather than `tokio_util`'s — nothing here
+  needed more than "cancel" and "is it cancelled," and a hand-rolled type
+  keeps it usable with no async runtime for a future wasm caller.
+  `ingest` (the only long-running operation that exists yet) is the vehicle
+  proving the `CancellationToken`/`OperationId` rules against real work
+  rather than a synthetic op built just to have something to cancel:
+  `Session::run_ingest` checks `cancel` once before starting (`ingest::
+  run_ingest` itself has only two coarse steps, fetch+land and normalize —
+  no finer-grained point to poll mid-flight yet) and records every
+  `ProgressEvent` into the operation table under a session-assigned id, so
+  `operation_status(id)` answers after the call returns too, for a
+  reconnecting client. `ingest::run_ingest` itself changed: it now takes a
+  caller-assigned `OperationId` instead of a hardcoded `OperationId(0)` (4
+  call sites updated — 3 in `tests/store_ingest.rs`, 1 in `bam-tui/src/
+  main.rs`, all passing `OperationId(0)` to keep prior behavior). `Package`
+  (P1.2) is reused directly as the API's package response type (added
+  `Serialize`/`Deserialize`/`JsonSchema` derives) rather than duplicated
+  into a DTO. Five tests in `tests/api_session.rs`.
+- **P2.7** — `Session::{mark, unmark, toggle, clear, select_by_query,
+  save_as, load, list_selections, delete_selection}`, all operating on the
+  working selection P2.6 already built, exposed through `api::selection`
+  (bare-`package_id` calls for `mark`/`unmark`/`toggle`/`clear` — one
+  primitive argument doesn't earn a named request type the way
+  `SelectByQueryRequest` or a by-name lookup does). `save_as` copies the
+  working selection's current members into a new named row (`INSERT OR
+  IGNORE ... SELECT`); `load` clears the working selection and copies from
+  the named one — independent snapshots, not shared storage, so further
+  `mark`/`unmark` on the working selection never mutates a saved one.
+  `select_by_query`'s four `SelectionMode` variants reuse `mark`/`unmark`/
+  `clear` rather than hand-rolling per-mode SQL. Six tests in
+  `tests/api_selection.rs`, against real file-backed DBs (not `:memory:` —
+  two independent `:memory:` connections can't demonstrate "shares a
+  database but not session state," and the drop-cleanup test needs to
+  reopen the same file after the `Session` that created it is gone).
+
+69 tests total (11 new + 58 pre-existing). `cargo fmt --check`, `cargo
+clippy --workspace --all-targets -- -D warnings`, and the wasm32
+`--no-default-features` check all clean. Also smoke-tested the `bam`
+binary (`cargo run -p bam-tui -- ingest --offline`) against the
+`run_ingest` signature change: still reports 501 packages, unchanged
+progress output.
+
+**Deviations for the next session to know about:**
+
+- **All DB-touching session/selection code lives in `store::session`, not
+  `api::`.** P0.4's purity scanner bans the literal substring `"rusqlite"`
+  in any file outside `src/store/` — `Session` (and hence `Connection`,
+  `rusqlite::Error`, bound-parameter queries) can't be named from `api/*.rs`
+  without tripping it. `api::` therefore never touches SQL directly; it
+  only calls `Session`'s plain-Rust methods and adapts typed request/
+  response structs around them. This reads as the more correct shape
+  anyway (I1's "rusqlite confined to `store::*`" already implied a
+  session type living there), but it means `bam-core::api`'s own module
+  doc originally tripped the same purity scanner by *naming*
+  `println!`/`eprintln!` literally while describing rule 1 — same class of
+  false positive Round 4 and Round 7 hit for `rusqlite`; reworded rather
+  than special-cased in the scanner.
+- Only `search_packages`, `get_package`, `list_categories`, and the P2.7
+  selection ops got typed request/response wrappers, plus `start_ingest`/
+  `operation_status` to give I5's cancellation/`OperationId` rules something
+  real to prove themselves against — ingest isn't named in P2.6's task
+  text, but no other long-running operation exists yet to exercise those
+  two rules honestly.
+
+---
+
 ## Next task
 
-**P2.6–P2.7** — the `bam-core::api` use-case layer (session-scoped, no
-global state, `CancellationToken`/`OperationId`/typed progress per invariant
-I5) and the selection store/operations (`mark`/`unmark`/`toggle`/`clear`/
-`select_by_query`/`save_as`/`load`/`list`/`delete`, invariant I7) that P2.5's
-`compile`'s `marked_selection_id` parameter and `InSelection` compilation
-were built to sit underneath. See
-[phase-2-query-core.md](docs/plan/phase-2-query-core.md). P2.8 (`in:`/
-`marked` as registry entries) comes after; per this round's deviation note,
-check what it actually still needs to add before implementing its task text
-literally.
+**P2.8** — register `in:`/`marked` as query fields. Per Round 8's deviation
+note, P2.1 (Round 7) already made `InSelection` its own `Predicate` variant
+and P2.5 (Round 8) already compiles it directly, independent of
+`FieldRegistry` — check what P2.8's task text actually still needs to add
+(if anything) before implementing it literally; it may be a smaller
+reconciliation pass rather than new registry entries. See
+[phase-2-query-core.md](docs/plan/phase-2-query-core.md).
 
 ---
 

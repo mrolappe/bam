@@ -9,6 +9,7 @@ pub mod land;
 mod migrations;
 pub mod normalize;
 pub mod recent;
+pub mod session;
 pub mod tables;
 
 pub use migrations::apply_migrations;
