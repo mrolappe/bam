@@ -317,25 +317,62 @@ this same false-vacuous-pass pattern if a third migration lands.
 
 ---
 
+## Round 6 — 2026-08-06 · `bam ingest` CLI + ProgressSink
+
+**Done:**
+
+- **P1.10** — `bam_core::progress` (new top-level module, ungated — pure
+  `serde` data, confirmed wasm32-safe): `OperationId(u64)`, `Outcome`
+  (`Success`/`Failed { message }`), `ProgressEvent`
+  (`Started`/`Advanced`/`Finished`, verbatim per the phase doc's shape), and
+  the `ProgressSink` trait (one `emit` method) implementing invariant I5's
+  "typed, serializable progress, never a formatted string." Orchestration
+  lives in `store::ingest::run_ingest`, `native`-gated alongside the rest of
+  `store::`: it wires P1.9's `fetch_and_land` → P1.2's landing → P1.6's
+  `normalize` behind one `IngestMode` enum (`Fetch` / `Offline` /
+  `RebuildNormalized`), emitting `Started` (with a step-count `total`) →
+  `Advanced` per step → `Finished`, with the error path emitting
+  `Finished { outcome: Failed }` before propagating. `IngestMode::Offline`
+  lands an `include_bytes!`-embedded copy of `index_sample.txt` — no
+  filesystem fixture path needed at runtime, and it's the same fixture P1.1
+  curated for exactly this purpose. `IngestMode::RebuildNormalized` never
+  touches `client` at all, satisfying the phase doc's "prove no network is
+  touched" requirement by construction rather than by a runtime check.
+  `bam-tui/src/main.rs` is a thin wrapper: hand-rolled arg parsing (three
+  flags don't justify a `clap` dependency), a `CliProgress` sink that
+  `eprintln!`s each event, `ReqwestClient` for the real HTTP path, and
+  `#[tokio::main]` for the async runtime the workspace already depends on.
+  Added one small pure helper, `bam_core::now_rfc3339()`, reusing
+  `ingest::normalize`'s existing (now `pub(crate)`) `civil_from_days` rather
+  than adding a date crate for the CLI's `fetched_at` timestamp. Four tests
+  in `tests/store_ingest.rs`, all driven through `run_ingest` directly rather
+  than by spawning the compiled binary — consistent with every prior round's
+  approach of testing core functions, and avoiding an `assert_cmd` dependency
+  for what the phase doc's five bullets don't actually require: recording-sink
+  event sequence, `ProgressEvent` round-trips through `serde_json`, `--offline`
+  (i.e. `IngestMode::Offline`) populates a DB from the fixture, and
+  `--rebuild-normalized` with a client that panics on any call — proving the
+  no-network claim. The fifth bullet, P0.4's purity test, is the pre-existing
+  test re-verified green, not a new one.
+
+All 37 tests pass (4 new + 33 pre-existing). `cargo fmt --check`, `cargo
+clippy --workspace --all-targets -- -D warnings`, and the wasm32
+`--no-default-features` check all clean. Also smoke-tested the actual `bam`
+binary (`cargo run -p bam-tui -- ingest --offline`, then
+`--rebuild-normalized`, both against a scratch DB): both report 501 packages
+landed from the fixture, and the no-subcommand path still prints the version
+banner.
+
+**No deviations this round.**
+
+---
+
 ## Next task
 
-**Round 6 — P1.10** (Sonnet tier). See
-[phase-1-ingest.md](docs/plan/phase-1-ingest.md) for the full task entry.
-
-Wire P1.9 → P1.2 → P1.6 behind one `bam ingest` CLI subcommand, with
-`--offline` (fixtures only) and `--rebuild-normalized` (skip fetch,
-re-derive from landing). This is where invariant **I5** first bites: progress
-is a typed, serializable `ProgressEvent` enum emitted through a
-`ProgressSink` trait, not a preformatted string — the CLI implements the sink
-and renders a progress bar, the core formats nothing. Hand over: invariant
-I5, the `ProgressEvent` shape (`Started`/`Advanced`/`Finished`, each carrying
-an `OperationId`), the three flags, the five tests (recording-sink event
-sequence, `ProgressEvent` round-trips through serde, `--offline` populates a
-DB from fixtures, `--rebuild-normalized` works with a fake client configured
-to panic on any call — proving no network is touched, P0.4's purity test
-still passes with no `println!` reaching into the core).
-
-**Round 6 ends when** all five tests pass.
+**Phase 1 is complete.** Next up is Phase 2 — query IR, pluggable query
+languages, the SQL compiler, the session-scoped API layer, and selections.
+See [phase-2-query-core.md](docs/plan/phase-2-query-core.md) for the task
+list and pick a round-sized slice (P2.1 onward) before starting.
 
 ---
 

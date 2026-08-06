@@ -66,8 +66,9 @@ fn days_from_civil(y: i64, m: i64, d: i64) -> i64 {
     era * 146097 + doe - 719468
 }
 
-/// Inverse of [`days_from_civil`].
-fn civil_from_days(z: i64) -> (i64, u32, u32) {
+/// Inverse of [`days_from_civil`]. `pub(crate)`: also used by
+/// `now_rfc3339` to stamp landing rows without a second date dependency.
+pub(crate) fn civil_from_days(z: i64) -> (i64, u32, u32) {
     let z = z + 719468;
     let era = if z >= 0 { z } else { z - 146096 } / 146097;
     let doe = z - era * 146097;

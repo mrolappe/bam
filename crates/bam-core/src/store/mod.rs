@@ -3,6 +3,7 @@ use std::path::Path;
 use rusqlite::Connection;
 
 pub mod fetch;
+pub mod ingest;
 pub mod land;
 mod migrations;
 pub mod normalize;

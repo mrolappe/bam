@@ -46,6 +46,7 @@ name = "bam-tui"
 version = "0.1.0"
 dependencies = [
  "bam-core",
+ "tokio",
 ]
 
 [[package]]
