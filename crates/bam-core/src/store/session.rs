@@ -15,6 +15,7 @@ use std::path::Path;
 use std::sync::Mutex;
 use std::sync::atomic::{AtomicU64, Ordering};
 
+use rusqlite::types::Value as SqlValue;
 use rusqlite::{Connection, OptionalExtension, params, params_from_iter};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -106,6 +107,41 @@ impl Session {
             .collect()
     }
 
+    /// A page of `limit` matches starting at `offset`, plus the total match
+    /// count — the shape P3.4's TUI list needs to query only its visible
+    /// window rather than materializing every matching [`Package`] (which,
+    /// at Aminet's ~84,000-package scale, is the difference the phase doc's
+    /// virtualization requirement exists to avoid). Ordered by `id` so
+    /// repeated windowed calls against an unchanged result set are stable.
+    pub fn search_window(
+        &self,
+        pred: &Predicate,
+        offset: usize,
+        limit: usize,
+    ) -> Result<(Vec<Package>, usize), SessionError> {
+        let compiled = self.compiled_for(pred)?;
+        let total: usize = self.conn.query_row(
+            &format!("SELECT COUNT(*) FROM ({})", compiled.sql),
+            params_from_iter(compiled.params.iter()),
+            |r| r.get(0),
+        )?;
+        let mut window_params = compiled.params.clone();
+        window_params.push(SqlValue::Integer(limit as i64));
+        window_params.push(SqlValue::Integer(offset as i64));
+        let mut stmt = self.conn.prepare(&format!(
+            "SELECT id FROM ({}) ORDER BY id LIMIT ? OFFSET ?",
+            compiled.sql
+        ))?;
+        let ids: Vec<i64> = stmt
+            .query_map(params_from_iter(window_params.iter()), |r| r.get(0))?
+            .collect::<Result<_, _>>()?;
+        let packages = ids
+            .into_iter()
+            .map(|id| tables::get_package(&self.conn, id).map_err(SessionError::from))
+            .collect::<Result<_, _>>()?;
+        Ok((packages, total))
+    }
+
     pub fn get_package(&self, id: i64) -> Result<Option<Package>, SessionError> {
         match tables::get_package(&self.conn, id) {
             Ok(p) => Ok(Some(p)),
@@ -125,13 +161,21 @@ impl Session {
     }
 
     fn matching_ids(&self, pred: &Predicate) -> Result<Vec<i64>, SessionError> {
-        self.check_named_selections_exist(pred)?;
-        let compiled = compile::compile(pred, &self.registry, Some(self.working_selection_id))?;
+        let compiled = self.compiled_for(pred)?;
         let mut stmt = self.conn.prepare(&compiled.sql)?;
         let ids = stmt
             .query_map(params_from_iter(compiled.params.iter()), |r| r.get(0))?
             .collect::<Result<_, _>>()?;
         Ok(ids)
+    }
+
+    fn compiled_for(&self, pred: &Predicate) -> Result<compile::CompiledQuery, SessionError> {
+        self.check_named_selections_exist(pred)?;
+        Ok(compile::compile(
+            pred,
+            &self.registry,
+            Some(self.working_selection_id),
+        )?)
     }
 
     /// `compile::compile` has no `Connection`, so a `in:'name'` for a

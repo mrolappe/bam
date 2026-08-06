@@ -782,12 +782,98 @@ clean.
 
 ---
 
+## Round 14 — 2026-08-06 · TUI shell and virtualized list (P3.4)
+
+**Done:**
+
+- **P3.4** — The phase doc's three tests presuppose a windowed query
+  primitive that didn't exist yet: `Session::search_packages` (P2.6)
+  materializes every match into a `Vec<Package>`, which is exactly what
+  "memory does not scale with result-set size" rules out. Added
+  `Session::search_window(pred, offset, limit) -> (Vec<Package>, usize)`
+  (`crates/bam-core/src/store/session.rs`) — wraps the existing compiled
+  `SELECT id FROM package WHERE ...` in `SELECT COUNT(*) FROM (...)` for the
+  total and `... ORDER BY id LIMIT ? OFFSET ?` for the page, reusing
+  `compile::compile` rather than duplicating predicate-compilation logic;
+  `matching_ids` and the new method now share a `compiled_for` helper that
+  factors out the existing-named-selection check. Exposed as
+  `api::search_window` (`SearchWindowRequest`/`SearchWindowResponse`,
+  `crates/bam-core/src/api/`) alongside P2.6's `search_packages`, not
+  replacing it — a full, unpaginated result list is still the right shape
+  for a future `type:`/CLI/MCP caller that isn't rendering a scrolling list.
+  Two tests in `tests/store_session_window.rs`, against 25 and 5 real
+  inserted rows: a page's ids match the corresponding slice of the full
+  unpaginated result, and an out-of-range offset returns an empty page with
+  the correct total still reported.
+
+  `crates/bam-tui` gained `ratatui`+`crossterm` (new workspace
+  dependencies) and three new modules. `store::PackageStore` is a small
+  trait (`window(pred, offset, limit) -> WindowResult{packages, total}`) —
+  narrower than `bam_core::api::Session` so a test can inject a fake that
+  counts calls without a database; `store::SessionStore` is the real
+  implementation, adapting `api::search_window`. `app::App<S: PackageStore>`
+  holds a `cursor` (absolute row) and a `top`/loaded `window`, re-querying
+  only when a `move_down`/`move_up`/`go_top`/`go_bottom` call would move the
+  cursor outside the currently loaded page — a scroll that stays inside the
+  page costs nothing, and one that doesn't costs exactly one
+  viewport-sized query, never the whole result set. `ui::render` draws three
+  panes (query line, package list, detail) from `App`'s already-loaded
+  `window` alone — it never queries. `app::all_packages()` (a `dir GLOB '*'`
+  match, `dir` being `NOT NULL`) stands in for a real query until P3.5 wires
+  the input line to the parser. Three tests in `crates/bam-tui/tests/
+  tui_shell.rs`: a counting fake store proves the initial query is
+  viewport-sized, that scrolling within the loaded page issues no further
+  query, and that crossing the page boundary issues exactly one more
+  viewport-sized (never total-sized) query; a 100-total and an 84,000-total
+  fake store both leave `App` holding exactly 20 `Package` records; a
+  `TestBackend` buffer snapshot for a 3-package fixture asserts all three
+  panes' expected text is present.
+
+  Also wired the shell into the `bam` binary as a new `tui` subcommand
+  (`crates/bam-tui/src/main.rs`) — Round 11's own note ("v1 doesn't wire the
+  resolver into the app loop yet... that starts at P3.4") flagged this as
+  P3.4's implied scope, and a "TUI shell" that only exists in tests isn't
+  one. Loads `bam.toml`'s `[keys]` section from `~/.config/bam/bam.toml`
+  (new — P3.3 built `KeymapConfig`/`merge_keymap` but nothing read a real
+  file yet) via P3.3's own merge function, falling back to the defaults on
+  a missing file or an unknown-action error. The crossterm event loop
+  converts key events to P3.1's `Key` type, feeds them through P3.2's
+  `Resolver`, and dispatches only `MoveDown`/`MoveUp`/`GoTop`/`GoBottom`/
+  `Quit` — every other resolved `Action` (modes, marking, help) is later
+  rounds' scope (P3.5-P3.9) and is silently accepted but not acted on yet.
+
+88 tests total (5 new — 2 in `store_session_window.rs`, 3 in `tui_shell.rs`
+— plus 83 pre-existing; verified directly via `cargo test --workspace 2>&1 |
+grep "test result:"` and summed, not hand-counted, per Round 10's own
+caution about this). `cargo fmt --check`, `cargo clippy --workspace
+--all-targets -- -D warnings`, and the wasm32 `--no-default-features` check
+(unaffected — `bam-tui` isn't part of it) all clean. Also smoke-tested the
+real `bam` binary: `ingest --offline` still reports 501 packages against a
+scratch DB, and `bam tui` against the same DB with no TTY attached (this
+environment has none) hits the `enable_raw_mode` failure path cleanly rather
+than panicking — the actual interactive rendering and key-handling loop is
+**not** verified against a real terminal this round; say so explicitly per
+the project's own standing rule on claiming UI features work.
+
+**Deviations for the next session to know about:**
+- `Session::search_window` and `api::search_window` are additions the phase
+  doc's P2.6/P2.5 text never named — they exist only because P3.4's own test
+  bullets are unsatisfiable without a paginated query primitive underneath
+  the virtualized list. Flagged in case a later phase (P4's harvest/search
+  work) expects `search_packages` alone to still be the one query surface.
+- The `tui` subcommand, its `~/.config/bam/bam.toml` config path, and the
+  choice to silently ignore non-navigation actions are this round's own
+  design choices, not dictated by any phase doc — same convention as Round
+  13's flagged `KeymapConfig`/`"unbind"` choices.
+
+---
+
 ## Next task
 
-**P3.4** — TUI shell and virtualized list: three panes (package list, query
-input line, detail pane) over `ratatui`, querying and rendering only the
-visible window, against the three tests in
-[phase-3-tui.md](docs/plan/phase-3-tui.md).
+**P3.5** — Query input line with inline errors: parse errors rendered under
+the offending byte span, a 150 ms debounce, and "an invalid query keeps the
+last valid result set" rather than blanking the list — against the four
+tests in [phase-3-tui.md](docs/plan/phase-3-tui.md).
 
 ---
 

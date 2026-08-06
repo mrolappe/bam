@@ -5,7 +5,7 @@
 use super::Error;
 use super::types::{
     GetPackageRequest, GetPackageResponse, ListCategoriesResponse, SearchPackagesRequest,
-    SearchPackagesResponse,
+    SearchPackagesResponse, SearchWindowRequest, SearchWindowResponse,
 };
 use crate::store::session::Session;
 
@@ -15,6 +15,17 @@ pub fn search_packages(
 ) -> Result<SearchPackagesResponse, Error> {
     let packages = session.search_packages(&req.predicate)?;
     Ok(SearchPackagesResponse { packages })
+}
+
+/// A page of results plus the total match count (P3.4) — the visible-window
+/// query the TUI's virtualized list issues instead of [`search_packages`],
+/// which materializes every match.
+pub fn search_window(
+    session: &Session,
+    req: &SearchWindowRequest,
+) -> Result<SearchWindowResponse, Error> {
+    let (packages, total) = session.search_window(&req.predicate, req.offset, req.limit)?;
+    Ok(SearchWindowResponse { packages, total })
 }
 
 pub fn get_package(

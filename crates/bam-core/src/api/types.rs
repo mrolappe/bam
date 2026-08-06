@@ -23,6 +23,19 @@ pub struct SearchPackagesResponse {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct SearchWindowRequest {
+    pub predicate: Predicate,
+    pub offset: usize,
+    pub limit: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct SearchWindowResponse {
+    pub packages: Vec<Package>,
+    pub total: usize,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct GetPackageRequest {
     pub id: i64,
 }
