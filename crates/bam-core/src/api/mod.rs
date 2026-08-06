@@ -28,7 +28,7 @@ pub mod types;
 pub use crate::cancel::CancellationToken;
 pub use crate::store::session::{OperationStatus, SelectionMode, Session};
 pub use ingest::{operation_status, start_ingest};
-pub use query::{get_package, list_categories, search_packages, search_window};
+pub use query::{get_package, list_categories, parse_query, search_packages, search_window};
 pub use selection::{clear, delete, load, mark, save_as, select_by_query, toggle, unmark};
 pub use types::*;
 

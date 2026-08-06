@@ -4,10 +4,22 @@
 
 use super::Error;
 use super::types::{
-    GetPackageRequest, GetPackageResponse, ListCategoriesResponse, SearchPackagesRequest,
-    SearchPackagesResponse, SearchWindowRequest, SearchWindowResponse,
+    GetPackageRequest, GetPackageResponse, ListCategoriesResponse, ParseQueryRequest,
+    ParseQueryResponse, SearchPackagesRequest, SearchPackagesResponse, SearchWindowRequest,
+    SearchWindowResponse,
 };
 use crate::store::session::Session;
+
+/// Parses query-line text (P3.5) so a caller sees the same span-carrying
+/// [`crate::query::lang::ParseError`] the parser itself raises, rather than
+/// a flattened string — the TUI's inline error marker needs the byte span.
+pub fn parse_query(
+    session: &Session,
+    req: &ParseQueryRequest,
+) -> Result<ParseQueryResponse, Error> {
+    let predicate = session.parse_query(&req.src)?;
+    Ok(ParseQueryResponse { predicate })
+}
 
 pub fn search_packages(
     session: &Session,

@@ -1,6 +1,7 @@
 use std::io::Stdout;
 use std::ops::ControlFlow;
 use std::process::ExitCode;
+use std::time::{Duration, Instant};
 
 use bam_core::api::Session;
 use bam_core::http::ReqwestClient;
@@ -9,7 +10,7 @@ use bam_core::store;
 use bam_core::store::ingest::{IngestMode, run_ingest};
 use bam_tui::app::{App, all_packages};
 use bam_tui::input::{
-    Action, Key, KeymapConfig, Resolution, Resolver, default_keymap, merge_keymap,
+    Action, Key, KeymapConfig, Mode, Resolution, Resolver, default_keymap, merge_keymap,
 };
 use bam_tui::store::{SessionStore, StoreError};
 use bam_tui::ui::render;
@@ -20,6 +21,10 @@ use crossterm::terminal::{
 };
 use ratatui::Terminal;
 use ratatui::backend::CrosstermBackend;
+
+/// The event-loop poll timeout: short enough that a pending debounced query
+/// (P3.5, 150ms) fires promptly even with no further keypresses.
+const POLL_INTERVAL: Duration = Duration::from_millis(50);
 
 struct CliProgress;
 
@@ -93,6 +98,7 @@ fn load_keymap(flags: &[String]) -> bam_tui::input::Keymap {
 fn to_input_key(code: KeyCode, modifiers: KeyModifiers) -> Option<Key> {
     match code {
         KeyCode::Esc => Some(Key::Esc),
+        KeyCode::Backspace => Some(Key::Backspace),
         KeyCode::Char(c) if modifiers.contains(KeyModifiers::CONTROL) => Some(Key::Ctrl(c)),
         KeyCode::Char(c) => Some(Key::Char(c)),
         _ => None,
@@ -117,29 +123,73 @@ fn apply_action(
     }
 }
 
+/// While in [`Mode::Insert`] (entered via `/`), keys type into the query
+/// line directly rather than resolving through the keymap — the same
+/// distinction vim makes between insert and normal mode. `Esc` leaves back
+/// to normal; everything else is either a character to append or backspace.
+fn edit_query_line(
+    app: &mut App<SessionStore>,
+    key: Key,
+    mode: &mut Mode,
+    resolver: &mut Resolver,
+) {
+    match key {
+        Key::Esc => {
+            *mode = Mode::Normal;
+            resolver.clear();
+        }
+        Key::Backspace => {
+            let mut text = app.query_text().to_string();
+            text.pop();
+            app.edit_query(text, Instant::now());
+        }
+        Key::Char(c) => {
+            let mut text = app.query_text().to_string();
+            text.push(c);
+            app.edit_query(text, Instant::now());
+        }
+        Key::Ctrl(_) => {}
+    }
+}
+
 fn run_loop(
     terminal: &mut Terminal<CrosstermBackend<Stdout>>,
     app: &mut App<SessionStore>,
     resolver: &mut Resolver,
 ) -> std::io::Result<()> {
+    let mut mode = Mode::Normal;
     loop {
         terminal.draw(|frame| render(app, frame))?;
-        let Event::Key(key_event) = event::read()? else {
-            continue;
-        };
-        if key_event.kind != KeyEventKind::Press {
-            continue;
-        }
-        let Some(key) = to_input_key(key_event.code, key_event.modifiers) else {
-            continue;
-        };
-        if let Resolution::Resolved(action) = resolver.handle_key(key) {
-            match apply_action(app, action) {
-                Ok(ControlFlow::Break(())) => return Ok(()),
-                Ok(ControlFlow::Continue(())) => {}
-                Err(e) => return Err(std::io::Error::other(e.to_string())),
+        if event::poll(POLL_INTERVAL)? {
+            let Event::Key(key_event) = event::read()? else {
+                continue;
+            };
+            if key_event.kind != KeyEventKind::Press {
+                continue;
+            }
+            let Some(key) = to_input_key(key_event.code, key_event.modifiers) else {
+                continue;
+            };
+
+            if mode == Mode::Insert {
+                edit_query_line(app, key, &mut mode, resolver);
+                continue;
+            }
+
+            if let Resolution::Resolved(action) = resolver.handle_key(key) {
+                if action == Action::EnterMode(Mode::Insert) {
+                    mode = Mode::Insert;
+                    continue;
+                }
+                match apply_action(app, action) {
+                    Ok(ControlFlow::Break(())) => return Ok(()),
+                    Ok(ControlFlow::Continue(())) => {}
+                    Err(e) => return Err(std::io::Error::other(e.to_string())),
+                }
             }
         }
+        app.tick(Instant::now())
+            .map_err(|e| std::io::Error::other(e.to_string()))?;
     }
 }
 

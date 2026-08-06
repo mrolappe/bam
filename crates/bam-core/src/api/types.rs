@@ -23,6 +23,16 @@ pub struct SearchPackagesResponse {
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct ParseQueryRequest {
+    pub src: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct ParseQueryResponse {
+    pub predicate: Predicate,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct SearchWindowRequest {
     pub predicate: Predicate,
     pub offset: usize,

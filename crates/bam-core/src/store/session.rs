@@ -27,7 +27,9 @@ use super::tables::{self, Package, Selection};
 use crate::cancel::CancellationToken;
 use crate::http::HttpClient;
 use crate::progress::{OperationId, Outcome, ProgressEvent, ProgressSink};
+use crate::query::bam_dsl::BamDsl;
 use crate::query::ir::{Predicate, SelectionRef};
+use crate::query::lang::{ParseError, QueryLanguage};
 use crate::query::registry::{FieldRegistry, package_fields};
 
 #[derive(Debug, Error)]
@@ -38,6 +40,8 @@ pub enum SessionError {
     Compile(#[from] CompileError),
     #[error(transparent)]
     Ingest(#[from] IngestError),
+    #[error(transparent)]
+    Parse(#[from] ParseError),
     #[error("no selection named '{0}'")]
     UnknownSelection(String),
 }
@@ -99,6 +103,14 @@ impl Session {
     }
 
     // ---- search / get / categories ----
+
+    /// Parses query-line text through `bam-dsl` (P2.4) against this
+    /// session's field registry. `bam-dsl` is the only registered surface
+    /// syntax so far — a `LanguageRegistry` (P2.2) for a single entry would
+    /// be speculative; wire one in when a second language needs selecting.
+    pub fn parse_query(&self, src: &str) -> Result<Predicate, SessionError> {
+        Ok(BamDsl.parse(src, &self.registry)?)
+    }
 
     pub fn search_packages(&self, pred: &Predicate) -> Result<Vec<Package>, SessionError> {
         self.matching_ids(pred)?

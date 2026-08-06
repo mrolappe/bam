@@ -5,6 +5,7 @@ use std::cell::RefCell;
 use std::rc::Rc;
 
 use bam_core::query::ir::Predicate;
+use bam_core::query::lang::ParseError;
 use bam_core::store::tables::Package;
 use bam_tui::app::{App, all_packages};
 use bam_tui::store::{PackageStore, StoreError, WindowResult};
@@ -48,6 +49,12 @@ impl PackageStore for FakeStore {
             packages,
             total: self.total,
         })
+    }
+
+    /// Unused by these tests (P3.4 predates the query line) — a placeholder
+    /// so `FakeStore` satisfies the trait.
+    fn parse(&self, src: &str) -> Result<Predicate, ParseError> {
+        Ok(Predicate::FullText(src.to_string()))
     }
 }
 

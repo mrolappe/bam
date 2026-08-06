@@ -4,6 +4,7 @@
 
 use bam_core::api::{self, Session};
 use bam_core::query::ir::Predicate;
+use bam_core::query::lang::ParseError;
 use bam_core::store::tables::Package;
 
 #[derive(Debug, Clone, PartialEq)]
@@ -33,6 +34,11 @@ pub trait PackageStore {
         offset: usize,
         limit: usize,
     ) -> Result<WindowResult, StoreError>;
+
+    /// Parses query-line text into a [`Predicate`] (P3.5). Returns the
+    /// parser's own span-carrying [`ParseError`] rather than [`StoreError`]
+    /// so the caller can render the error under the offending byte range.
+    fn parse(&self, src: &str) -> Result<Predicate, ParseError>;
 }
 
 pub struct SessionStore {
@@ -64,6 +70,23 @@ impl PackageStore for SessionStore {
         Ok(WindowResult {
             packages: resp.packages,
             total: resp.total,
+        })
+    }
+
+    fn parse(&self, src: &str) -> Result<Predicate, ParseError> {
+        api::parse_query(
+            &self.session,
+            &api::ParseQueryRequest {
+                src: src.to_string(),
+            },
+        )
+        .map(|resp| resp.predicate)
+        .map_err(|e| match e {
+            api::Error::Parse(pe) => pe,
+            other => ParseError {
+                message: other.to_string(),
+                span: None,
+            },
         })
     }
 }

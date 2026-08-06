@@ -868,12 +868,107 @@ the project's own standing rule on claiming UI features work.
 
 ---
 
+## Round 15 — 2026-08-06 · Query input line with inline errors (P3.5)
+
+**Done:**
+
+- **P3.5** — `Session::parse_query` (`crates/bam-core/src/store/session.rs`,
+  native-gated) parses query-line text through `BamDsl` directly against the
+  session's own `FieldRegistry` — no `LanguageRegistry` (P2.2) involved: it's
+  the only registered surface syntax so far, and wiring a registry for one
+  entry would be speculative ahead of a second language or a real
+  `default_query_language` config key (both still doc-only, confirmed by
+  grep before writing this). `SessionError` gained a `Parse(#[from]
+  ParseError)` variant so the call composes with `?` like every other
+  session method. `api::parse_query` (`crates/bam-core/src/api/query.rs`) is
+  the thin typed wrapper (`ParseQueryRequest{ src }` /
+  `ParseQueryResponse{ predicate }`), following P2.6's existing pattern
+  rather than having `bam-tui` call `Session` directly — `store.rs`'s
+  `SessionStore` already goes through `api::` for `window`, not `Session`
+  itself, so this keeps one convention rather than two.
+
+  `bam-tui`'s `PackageStore` trait (`crates/bam-tui/src/store.rs`) gained
+  `fn parse(&self, src: &str) -> Result<Predicate, ParseError>` — returning
+  the parser's own span-carrying `ParseError`, not `StoreError`, since the
+  inline error marker needs the byte span, not a flattened string.
+  `SessionStore::parse` unwraps `api::parse_query`'s `SessionError` back down
+  to a `ParseError` (the only variant `parse_query` can actually produce;
+  other variants get a spanless fallback rather than a `panic!`/`unwrap`).
+
+  `App` (`crates/bam-tui/src/app.rs`) gained `query_text`, `query_error`, and
+  `debounce_deadline: Option<Instant>`, plus `edit_query(text, now)` (records
+  the text and resets a 150 ms deadline without querying) and `tick(now)`
+  (applies the pending edit once the deadline has passed: a successful parse
+  replaces `predicate`/`window` and resets the cursor; a `ParseError` is
+  stored and `predicate`/`window` are left exactly as they were — the
+  "keep last valid result set" rule). Both take an explicit `Instant` rather
+  than reading the clock internally, so the four tests drive debounce timing
+  without a real `sleep`. `ui::render` (`crates/bam-tui/src/ui.rs`) grew a
+  second one-line row under the query line: when `query_error` is set, it
+  renders spaces up to the error's column (`span.0` clamped to the text's
+  last character, so an operator with nothing after it — `size>`, whose real
+  parser span is one-past-the-end — still marks the `>` itself, not the
+  column after it) followed by `^` and the message.
+
+  `bam-tui/src/input/mod.rs` gained `Key::Backspace` (mapped from
+  crossterm's `KeyCode::Backspace` in `main.rs`) — a small, necessary
+  addition, same class as Round 13's `OpenHelp`: without it there's no way
+  to correct a typo in the query line, which would make the feature
+  built-but-unusable rather than merely v1-scoped. `main.rs`'s `run_loop`
+  now tracks a local `Mode` (Normal by default): while `Mode::Insert` (`/`
+  in the default keymap resolves to `Action::EnterMode(Mode::Insert)`, which
+  `run_loop` catches before `apply_action` to flip the mode rather than
+  falling through to `apply_action`'s ignored-action catch-all), keys append
+  to or backspace out of the query text directly instead of resolving
+  through the keymap — `Esc` returns to `Mode::Normal` and clears the
+  resolver's pending state. `event::read()`'s indefinite block was replaced
+  with `event::poll(50ms)` so `app.tick(Instant::now())` still runs (and a
+  settled debounce still fires a query) even while no key arrives; the four
+  tests themselves don't touch `main.rs` at all, matching every prior TUI
+  round's precedent of testing `App`/`ui::render` directly.
+
+  Four tests in the new `crates/bam-tui/tests/tui_query_line.rs`, matching
+  the phase doc's four bullets exactly. `FakeStore::parse` calls the real
+  `BamDsl`/`FieldRegistry` (both pure, no database) rather than a hand-rolled
+  stub, so the error-span test exercises the actual parser's span for
+  `dir:util/* size>` (byte offset 16, one past the trailing `>` at index 15)
+  instead of an invented one; `FakeStore::window` only distinguishes the
+  initial `all_packages()` predicate from any other, which is enough to prove
+  a valid edit changes what's rendered without reimplementing glob/compare
+  semantics in a fake. `crates/bam-tui/tests/tui_shell.rs`'s pre-existing
+  `FakeStore` (P3.4) needed a one-line placeholder `parse` impl to satisfy
+  the now-larger trait — unused by those three tests, noted inline.
+
+92 tests total (4 new + 88 pre-existing). `cargo fmt --check`, `cargo clippy
+--workspace --all-targets -- -D warnings`, and the wasm32
+`--no-default-features` check (unaffected — `bam-tui` isn't part of it) all
+clean. Also smoke-tested the real `bam` binary: `ingest --offline` still
+reports 501 packages, and `bam tui` against the same scratch DB still hits
+the clean `enable_raw_mode` failure path with no TTY attached — the real
+interactive typing/debounce/error-marker loop is **not** verified against a
+real terminal this round, same standing caveat as every prior TUI round.
+
+**Deviations for the next session to know about:**
+- No `LanguageRegistry` wiring for the search box — `Session::parse_query`
+  calls `BamDsl` directly. `docs/plan/phase-2-query-core.md` and
+  `phase-3-tui.md` both mention a `default_query_language` config key, but
+  it exists only in docs (confirmed by grep before writing this round's
+  code), and P3.8 (highlight rules, invariant I3) is the task that actually
+  needs to select among multiple registered languages. Revisit if a second
+  query language is registered before then.
+- `Key::Backspace` is a v1-necessary addition beyond what P3.1-P3.4 named,
+  same class as Round 13's `ActionKind::OpenHelp` — flagged in case a future
+  round assumes `Key`'s variant list is exactly what P3.1's doc enumerated.
+
+---
+
 ## Next task
 
-**P3.5** — Query input line with inline errors: parse errors rendered under
-the offending byte span, a 150 ms debounce, and "an invalid query keeps the
-last valid result set" rather than blanking the list — against the four
-tests in [phase-3-tui.md](docs/plan/phase-3-tui.md).
+**P3.6** — Selection UI and `:` command line: `space` toggles the row under
+the cursor through P2.7's API, Visual mode marks a range, and `:mark
+<query>`/`:unmark <query>`/`:save <name>`/`:load <name>`/`:selections` —
+against the four tests plus a diff-review check in
+[phase-3-tui.md](docs/plan/phase-3-tui.md).
 
 ---
 
