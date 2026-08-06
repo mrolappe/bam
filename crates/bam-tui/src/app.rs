@@ -6,6 +6,7 @@
 use std::time::{Duration, Instant};
 
 use bam_core::api::{SelectionMode, SelectionSummary};
+use bam_core::highlight::{self, Decoration, RowTokens};
 use bam_core::query::ir::{FieldId, Pattern, Predicate};
 use bam_core::query::lang::ParseError;
 use bam_core::store::tables::Package;
@@ -192,6 +193,24 @@ impl<S: PackageStore> App<S> {
 
     pub fn visible_marked(&self) -> &[bool] {
         &self.marked
+    }
+
+    /// Conflict-resolved semantic tokens (P3.7, `bam-handoff.md` §11.1) for
+    /// the row at window-local index `idx`. Marked state (I7) is emitted as
+    /// a [`Decoration`] like any other rule/provider output and resolved
+    /// through the same [`highlight::resolve`] path, not special-cased —
+    /// P3.8's DSL-rule decorations will join this same list once they exist.
+    pub fn row_tokens(&self, idx: usize) -> RowTokens {
+        let mut decorations = Vec::new();
+        if self.marked.get(idx).copied().unwrap_or(false) {
+            decorations.push(Decoration {
+                gutter: Some(highlight::MARKED_GUTTER.to_string()),
+                badge: None,
+                background: None,
+                priority: highlight::MARKED_PRIORITY,
+            });
+        }
+        highlight::resolve(&decorations)
     }
 
     pub fn enter_visual(&mut self) {

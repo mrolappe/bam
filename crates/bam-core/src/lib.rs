@@ -1,6 +1,7 @@
 #[cfg(feature = "native")]
 pub mod api;
 pub mod cancel;
+pub mod highlight;
 pub mod http;
 pub mod ingest;
 pub mod progress;

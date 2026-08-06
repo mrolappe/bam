@@ -1061,14 +1061,70 @@ this round, same standing caveat as every prior TUI round.
 
 ---
 
+## Round 17 — 2026-08-06 · Semantic token → ratatui style (P3.7)
+
+**Done:**
+
+- **P3.7** — `bam_core::highlight` (new top-level module, ungated — pure data
+  and logic, confirmed by the wasm32 `--no-default-features` check):
+  `Decoration` (`gutter`/`badge`/`background: Option<String>` +
+  `priority: i32`, verbatim the plugin-output shape from `bam-handoff.md`
+  §11.1) and `resolve(&[Decoration]) -> RowTokens`, the one conflict-
+  resolution implementation both DSL rules (P3.8, not built yet) and plugin
+  output (Phase 8) will feed. `background` is exclusive: a strict `>`
+  comparison while folding left-to-right means the *first* decoration to
+  reach the max priority wins ties, not sort/hash order — deterministic and
+  stable by construction, so no separate tiebreak field or sort key was
+  needed. `gutters`/`badges` stack, `sort_by_key(Reverse(priority))` (stable,
+  preserving input order on ties) then `.take(3)`. `MARKED_GUTTER`/
+  `MARKED_PRIORITY` (`i32::MAX`) are the constants marked-state rendering
+  uses to build its own `Decoration` — the module doesn't special-case
+  marked state itself, callers do, per the phase doc's "marked state flows
+  through the same token path" instruction. Three tests in
+  `tests/highlight.rs` (highest-priority background wins with the winner
+  pinned; equal priorities resolve to the first-seen one, not hash order;
+  four stacking gutters render exactly three, highest-priority-first).
+
+  `bam_tui::tokens` (new module) is the one mapping table from token string
+  to ratatui presentation — `background_style`, `gutter_char`, `badge_text`
+  — each falling through to an unstyled/blank default on an unrecognized
+  token rather than panicking (one inline test). `App::row_tokens(idx)`
+  (`crates/bam-tui/src/app.rs`) builds the decoration list for a window-local
+  row (currently just the marked-state `Decoration`, since P3.8's rule
+  evaluation doesn't exist yet to contribute more) and calls
+  `highlight::resolve` — the same function a future rule-driven decoration
+  list will call, not a parallel path. `ui::render` (`crates/bam-tui/src/
+  ui.rs`) now builds each row's gutter prefix, background `Style`, and badge
+  suffix from `row_tokens` instead of the previous ad hoc `if marked {"* "}`
+  check; since `gutter_char("marked") == '*'` and an unmarked row still
+  resolves to an empty gutter list, the rendered buffer is byte-identical to
+  before this round for every existing case — confirmed by Round 14's
+  pre-existing snapshot test (`tui_shell.rs::buffer_snapshot_for_a_small_
+  fixture`) passing unmodified. One integration test,
+  `tests/tui_tokens.rs::a_marked_row_resolves_through_the_same_path_as_a_
+  highlight_rule`, builds a `FakeStore`, marks a row, and asserts
+  `app.row_tokens` for that row equals `resolve()` called directly on a
+  hand-built `Decoration` carrying the same marked gutter/priority — proving
+  the "same path" claim rather than asserting it only by code reading.
+
+101 tests total (5 new — 3 in `highlight.rs`, 1 in `tokens`'s inline test, 1
+in `tui_tokens.rs` — plus 96 pre-existing). `cargo fmt --check`, `cargo
+clippy --workspace --all-targets -- -D warnings`, and the wasm32
+`--no-default-features` check all clean. Also smoke-tested the real `bam`
+binary: `ingest --offline` still reports 501 packages against a scratch DB,
+unaffected by this round's TUI-only rendering change.
+
+**No deviations.**
+
+---
+
 ## Next task
 
-**P3.7** — Semantic token → ratatui style: the core emits semantic tokens
-(`gutter: "user"`, `background: "accent-subtle"`, `badge: "XL"`); one mapping
-table turns them into `Style` values and gutter characters, with marked
-state (I7) flowing through the same token path rather than a special case.
-Conflict rules: background is exclusive (highest `priority` wins), gutters
-and badges stack capped at 3. Five tests against
+**P3.8** — Highlight rules with hot reload: parse `[[highlight]]` blocks from
+`bam.toml`, compile each `when` through the query language named by its
+`lang` key (invariant I3), evaluate against visible rows, and feed the
+resulting `Decoration`s into P3.7's `highlight::resolve`. Watch the file and
+reload on change, debounced. Six tests against
 [phase-3-tui.md](docs/plan/phase-3-tui.md).
 
 ---

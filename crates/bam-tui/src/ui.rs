@@ -3,11 +3,12 @@
 
 use ratatui::Frame;
 use ratatui::layout::{Constraint, Layout};
-use ratatui::style::{Modifier, Style};
+use ratatui::style::Modifier;
 use ratatui::widgets::{Block, Borders, List, ListItem, Paragraph};
 
 use crate::app::App;
 use crate::store::PackageStore;
+use crate::tokens;
 
 const QUERY_PREFIX: &str = "search: ";
 
@@ -41,23 +42,33 @@ pub fn render(app: &App<impl PackageStore>, frame: &mut Frame) {
     }
 
     let start = app.window_start();
-    let marked = app.visible_marked();
     let items: Vec<ListItem> = app
         .visible()
         .iter()
         .enumerate()
         .map(|(i, p)| {
-            let marker = if marked.get(i).copied().unwrap_or(false) {
-                "* "
+            let row = app.row_tokens(i);
+            let gutter: String = row.gutters.iter().map(|g| tokens::gutter_char(g)).collect();
+            let marker = if gutter.is_empty() {
+                String::new()
             } else {
-                ""
+                format!("{gutter} ")
             };
-            let label = format!("{marker}{}/{}", p.dir, p.file);
+            let badges: String = row
+                .badges
+                .iter()
+                .map(|b| format!(" [{}]", tokens::badge_text(b)))
+                .collect();
+            let label = format!("{marker}{}/{}{badges}", p.dir, p.file);
+            let mut style = row
+                .background
+                .as_deref()
+                .map(tokens::background_style)
+                .unwrap_or_default();
             if start + i == app.cursor() {
-                ListItem::new(label).style(Style::default().add_modifier(Modifier::REVERSED))
-            } else {
-                ListItem::new(label)
+                style = style.add_modifier(Modifier::REVERSED);
             }
+            ListItem::new(label).style(style)
         })
         .collect();
     let list = List::new(items).block(Block::default().borders(Borders::ALL).title(format!(
