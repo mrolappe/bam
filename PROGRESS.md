@@ -119,33 +119,98 @@ it as five-tests-per-table would silently inflate the count to nine.
 
 ---
 
+## Round 3 — 2026-08-06 · INDEX parser + charset decode
+
+**Done:**
+
+- **P1.4** — `parse_index_line(raw: &[u8]) -> Result<IndexRecord<'_>,
+  ParseError>` in `crates/bam-core/src/ingest/index.rs`. The real fixture's
+  3-line preamble (`fixtures/README.md`) turned out to carry **no
+  column-title header row at all** — just a `|` banner — so "derive offsets
+  from the header row" had nothing to derive from, and the phase doc's
+  fallback clause ("fixed offsets when absent") applies. Pure fixed byte
+  offsets don't work either: `file`/`dir`/`size`/`age` never contain a space,
+  but an overlong filename (the `gcc-4.2.2-*-cygwin.tar.bz2` awkward-case
+  lines) pushes every later column right by the overflow amount, so a fixed
+  absolute offset for `dir` would misread those two lines. Implemented
+  instead as a sequential scan for the first four whitespace-delimited
+  tokens — correct regardless of column drift, since it doesn't depend on
+  any absolute position — with the description taken as the exact remaining
+  bytes (`&raw[pos..]`), untouched, so its internal double-spaces survive
+  byte-for-byte. This satisfies the doc's real concern (don't
+  `split_whitespace()` the *whole* line and rejoin, which would collapse the
+  description's internal runs) without the brittleness of hardcoded column
+  numbers. Preamble lines (`raw.first() == Some(&b'|')`) return
+  `ParseError::Preamble`, a variant distinct from `Truncated`, so a caller
+  can skip them without treating them as malformed data. Seven tests in
+  `tests/ingest_index.rs`; the awkward-case lines are located in the fixture
+  by filename prefix rather than hardcoded line number, so the tests stay
+  correct if the fixture is ever re-curated.
+- **P1.5** — `decode(bytes: &[u8]) -> (String, &'static Encoding)` in
+  `crates/bam-core/src/ingest/charset.rs`. `chardetng` + `encoding_rs`, not
+  gated behind `native` — both are pure computation with no OS dependency,
+  confirmed by the wasm32 `--no-default-features` check passing. Verified
+  `chardetng`'s actual source (`guess_assess` at
+  `chardetng-0.1.17/src/lib.rs:2978`) rather than assuming its API: it
+  returns `(&'static Encoding, bool)` where the bool is an explicit
+  low-confidence signal, and for a generic/unknown TLD (we always pass
+  `None`) its own default candidate is already `encoding_rs::WINDOWS_1252` —
+  confirming `encoding_rs`'s modeling of legacy ISO-8859-1 as
+  `WINDOWS_1252` (the WHATWG Encoding Standard's alias; the two differ only
+  in the rarely-used 0x80-0x9F range) is the idiomatic fallback for this
+  crate pairing, not a workaround. Made the fallback explicit in code anyway
+  rather than relying on that implicit default, so intent doesn't silently
+  depend on an internal detail of a dependency. Three tests in
+  `tests/ingest_charset.rs`, not four: the phase doc's third bullet ("same
+  code path serves both") isn't independently assertable at runtime — it's
+  satisfied structurally by both the ISO-8859-1 and UTF-8 tests calling the
+  same `decode()`, with no `decode_latin1`/`decode_utf8` pair to have
+  diverged in the first place. Same reasoning as Round 2's five-bullets/one-
+  test call for P1.2.
+
+All 19 tests pass (10 new + 9 pre-existing). `cargo fmt --check`, `cargo
+clippy --workspace --all-targets -- -D warnings`, and `cargo check -p
+bam-core --no-default-features --target wasm32-unknown-unknown` all clean.
+
+**Deviations for the next session to know about:**
+- `chardetng` resolved to `0.1.17`; a `1.0.0` exists on crates.io but the
+  workspace pin (`"0.1"`) was left as the lower, longer-established line
+  rather than jumping a major version unprompted — revisit if P1.9's HTTP
+  work wants something `1.0` added.
+- No literal Aminet INDEX header row with column titles was found in real
+  data (only the `|`-banner preamble) — if a future fixture (e.g. from a
+  different mirror or format era) does carry one, `parse_index_line` doesn't
+  use it; the token-scan approach doesn't need it, but the phase doc's
+  "derive offsets from the header row" primary clause was never actually
+  exercised.
+
+---
+
 ## Next task
 
-**Round 3 — P1.4–P1.5** (Sonnet tier).
+**Round 4 — P1.6–P1.7** (Sonnet then Haiku tier).
 See [phase-1-ingest.md](docs/plan/phase-1-ingest.md) for the full task
 entries.
 
-1. **P1.4** — INDEX line parser: `parse_index_line(raw: &[u8]) ->
-   Result<IndexRecord<'_>, ParseError>` in `crates/bam-core/src/ingest/index.rs`.
-   Column-aligned (offsets derived from the header row), not
-   whitespace-delimited. Returns borrowed byte ranges — decoding is P1.5, kept
-   separate so the landing layer keeps the original bytes. Hand over: the
-   P1.1 fixture, the `IndexRecord` field list (file, dir, size, age,
-   description), the column-offsets-not-whitespace constraint, the borrow
-   requirement.
-2. **P1.5** — Charset decode helper: `decode(bytes: &[u8]) -> (String,
-   &'static Encoding)`, `chardetng` to detect + `encoding_rs` to decode,
-   defaulting to ISO-8859-1 on low-confidence detection. One code path for
-   both ISO-8859-1 and UTF-8 input — no input-specific branch. Hand over:
-   §13's encoding paragraph, the signature, the ISO-8859-1 default, the note
-   that `chardetng` wants full text rather than a prefix.
+1. **P1.6** — Normalizer: landing rows → `package` rows, applying P1.4 and
+   P1.5. Derives `size_bytes` from `"134K"`/`"1.2M"` (K/M suffixes, base
+   1024), `uploaded_on` from age-in-weeks plus `fetched_at`
+   (`date_precision = 'week'`), and splits `name`/`version` from the
+   filename — ambiguous split puts the whole stem in `name` and leaves
+   `version` NULL rather than guessing. Hand over: the `package` schema, the
+   three derivation rules, the idempotency requirement (`normalize()` run
+   twice yields identical rows) and the offline-rebuild requirement
+   (drop `package`, re-normalize from `landing_index_line` alone, network
+   unavailable).
+2. **P1.7** — Exhaustive table-driven tests for the two pure functions in
+   P1.6 (size-suffix parse, name/version split), using the exact cases and
+   expected values given in the phase doc. If a case's expected value looks
+   wrong, report it back rather than editing the expectation.
 
-**Round 3 ends when** P1.4's tests pass (every fixture line parses; one named
-test per P1.1 awkward case — long filename, internal whitespace runs,
-non-ASCII bytes, zero-size entry, skipped preamble; truncated line yields
-`ParseError` not a panic) and P1.5's four tests pass (ISO-8859-1 `ö` decodes
-correctly, UTF-8 decodes correctly, same code path for both, ambiguous short
-input falls back to ISO-8859-1 and reports that label).
+**Round 4 ends when** P1.6's four tests pass (idempotent, offline-rebuildable,
+sane dates at age 0 and the max observed age, every row `date_precision =
+'week'`) and P1.7's table-driven tests pass against the given expected
+values.
 
 ---
 
