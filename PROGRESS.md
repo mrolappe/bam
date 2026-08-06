@@ -367,12 +367,74 @@ banner.
 
 ---
 
+## Round 7 — 2026-08-06 · Query IR + `QueryLanguage` trait (P2.1–P2.2)
+
+**Done:**
+
+- **P2.1** — `crates/bam-core/src/query/ir.rs` and `.../registry.rs`, plus
+  `docs/query-ir.md` as one artifact per the task's own framing. `Predicate`,
+  `CmpOp`, `Value`, `Pattern`, `SelectionRef` verbatim from the phase doc /
+  invariant I2. `FieldId` wraps an owned `String`, not `&'static str`: a
+  `Predicate` is built from arbitrary parsed or LLM-generated input and must
+  round-trip through serde without borrowing from it, and a closed `FieldId`
+  enum would make P2.8's "registering a field touches only the registry"
+  claim false by construction. `FieldRegistry::resolve` matches name or
+  alias; `check_compare` validates a `CmpOp` against `FieldDef.ops`;
+  `check_match` validates `Match`/glob against `FieldDef.ty` — only `Text`
+  fields permit it, so `size:~'foo'` is rejected at resolve time without a
+  separate `matchable` flag. `package_fields()` maps eight fields to P1.2's
+  `package` columns (`dir`, `file`, `name`, `version`, `size`/`size_bytes`,
+  `date`/`uploaded_on`, `year`, `description`); `type` and `author` from
+  `bam-handoff.md` §11's examples are deliberately absent — neither has a
+  backing column yet (`type` awaits a derived category, `author` awaits
+  Phase 4 harvesting) — recorded in the doc rather than stubbed. `year`
+  shares `uploaded_on` with `date`; the doc notes the compiler must also
+  consult `date_precision`, per P2.5's own "three non-obvious points." Five
+  tests in `tests/query_ir.rs`, matching the five test bullets exactly (the
+  operator/match-not-permitted bullet covers both a rejected `Match` on an
+  `Int` field and a rejected `CmpOp` on a `Text` field, since the phase doc's
+  one example — `size:~'foo'` — is the `Match` case specifically). The doc's
+  "worked IR trees for a dozen queries" section includes two queries that
+  don't yet compile (`type`/`author`-keyed ones) with the gap stated inline,
+  rather than silently substituting a field that doesn't carry the same
+  meaning.
+- **P2.2** — `crates/bam-core/src/query/lang.rs`: `QueryLanguage` trait,
+  `GrammarKind`, `ParseError`, `LanguageRegistry`. `ParseError` carries a
+  `span: Option<(usize, usize)>` from this task rather than being added in
+  P2.4 — the trait signature is the registered contract, and adding a field
+  to it later would be the exact kind of breaking change pluggability (I2/I4)
+  exists to avoid; P2.4 fills the span in, it doesn't add the field.
+  `LanguageRegistry::get` takes `Option<&str>`, falling back to a
+  constructor-supplied default id. Five tests in `tests/query_lang.rs`, two
+  hand-rolled stub `QueryLanguage` impls (`EchoLang`, `MuteLang`) local to
+  the test file — no real grammar exists yet (P2.3/P2.4), so stubs are
+  correct here, not a shortcut.
+
+Both modules are ungated (pure `serde` data plus a trait/registry, no
+`rusqlite`), confirmed by the wasm32 `--no-default-features` check. Hit the
+same purity-scanner false positive Round 4 flagged: a module-doc comment in
+`ir.rs` originally named the excluded dependency by its literal crate name
+and tripped P0.4's raw substring scan; reworded to "no database driver
+dependency" — the scanner doesn't parse comments separately from code, and
+this is now the second time a doc comment discussing invariant I1 has hit
+it.
+
+All 47 tests pass (10 new + 37 pre-existing). `cargo fmt --check`, `cargo
+clippy --workspace --all-targets -- -D warnings`, and the wasm32
+`--no-default-features` check all clean.
+
+**No deviations beyond the purity-scanner note above.**
+
+---
+
 ## Next task
 
-**Phase 1 is complete.** Next up is Phase 2 — query IR, pluggable query
-languages, the SQL compiler, the session-scoped API layer, and selections.
-See [phase-2-query-core.md](docs/plan/phase-2-query-core.md) for the task
-list and pick a round-sized slice (P2.1 onward) before starting.
+Round 6 of the plan's own sizing table (`IMPLEMENTATION_PLAN.md`) is next:
+**P2.3–P2.5** — the `bam-dsl` grammar spec, its parser, and the IR → SQL
+compiler. See [phase-2-query-core.md](docs/plan/phase-2-query-core.md).
+P2.3 has no tests of its own; its fifteen worked examples become P2.4's test
+table verbatim, so P2.3 and P2.4 are not independently stoppable — plan to
+do both in the same round.
 
 ---
 
