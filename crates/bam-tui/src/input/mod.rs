@@ -29,6 +29,7 @@ impl Key {
     /// sequence against the keymap, e.g. `Ctrl('d')` -> `"ctrl-d"`.
     fn token(self) -> String {
         match self {
+            Key::Char(' ') => "space".to_string(),
             Key::Char(c) => c.to_string(),
             Key::Ctrl(c) => format!("ctrl-{c}"),
             Key::Esc => "esc".to_string(),
@@ -62,6 +63,7 @@ pub enum ActionKind {
     EnterVisual,
     EnterCommand,
     EnterSearch,
+    OpenHelp,
     LeaveMode,
     Quit,
 }
@@ -87,6 +89,7 @@ pub enum Action {
     PrevMatch(usize),
     ToggleMark,
     EnterMode(Mode),
+    OpenHelp,
     LeaveMode,
     Quit,
 }
@@ -115,6 +118,7 @@ fn resolve_action(kind: ActionKind, count: Option<usize>) -> Action {
         ActionKind::EnterVisual => Action::EnterMode(Mode::Visual),
         ActionKind::EnterCommand => Action::EnterMode(Mode::Command),
         ActionKind::EnterSearch => Action::EnterMode(Mode::Insert),
+        ActionKind::OpenHelp => Action::OpenHelp,
         ActionKind::LeaveMode => Action::LeaveMode,
         ActionKind::Quit => Action::Quit,
     }
@@ -123,8 +127,83 @@ fn resolve_action(kind: ActionKind, count: Option<usize>) -> Action {
 /// Bindings as they round-trip through `bam.toml`: key-sequence token
 /// (`"j"`, `"gg"`, `"ctrl-d"`) to the action it names. Defaults (P3.3) and
 /// user-override merging are layered on top of this type, not part of it.
-#[derive(Debug, Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Default, PartialEq, Eq, Serialize, Deserialize)]
 pub struct Keymap(pub HashMap<String, ActionKind>);
+
+/// The full v1 binding list (`docs/plan/phase-3-tui.md`, P3.3), counts
+/// applied by [`resolve_action`] where the bound [`ActionKind`] takes one.
+pub fn default_keymap() -> Keymap {
+    use ActionKind::*;
+    Keymap(HashMap::from([
+        ("j".to_string(), MoveDown),
+        ("k".to_string(), MoveUp),
+        ("gg".to_string(), GoTop),
+        ("G".to_string(), GoToRowOrBottom),
+        ("0".to_string(), LineStart),
+        ("$".to_string(), LineEnd),
+        ("ctrl-d".to_string(), HalfPageDown),
+        ("ctrl-u".to_string(), HalfPageUp),
+        ("ctrl-f".to_string(), PageDown),
+        ("ctrl-b".to_string(), PageUp),
+        ("H".to_string(), ScreenTop),
+        ("M".to_string(), ScreenMiddle),
+        ("L".to_string(), ScreenBottom),
+        ("n".to_string(), NextMatch),
+        ("N".to_string(), PrevMatch),
+        ("/".to_string(), EnterSearch),
+        ("?".to_string(), OpenHelp),
+        (":".to_string(), EnterCommand),
+        ("space".to_string(), ToggleMark),
+        ("v".to_string(), EnterVisual),
+        ("esc".to_string(), LeaveMode),
+        ("q".to_string(), Quit),
+    ]))
+}
+
+/// The `[keys]` section of `bam.toml` — a flat token-to-action-name table,
+/// same shape as [`Keymap`] but with the value still a raw string so an
+/// unknown name can be reported, and `"unbind"` can be recognized (it isn't
+/// a real [`ActionKind`]).
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct KeymapConfig {
+    #[serde(default)]
+    pub keys: HashMap<String, String>,
+}
+
+const UNBIND: &str = "unbind";
+
+/// Names an override's value that isn't `"unbind"` and doesn't match any
+/// [`ActionKind`]'s serde name.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct UnknownAction(pub String);
+
+impl std::fmt::Display for UnknownAction {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "unknown action: {}", self.0)
+    }
+}
+
+impl std::error::Error for UnknownAction {}
+
+/// Layers `bam.toml`'s `[keys]` overrides over the default table. An
+/// override replaces the default binding for that key; `"unbind"` removes
+/// it instead of pointing at an action. Reuses `ActionKind`'s own
+/// `Deserialize` (rather than a second hand-written name table) so a
+/// renamed or added variant can't drift out of sync with what an override
+/// string is allowed to name.
+pub fn merge_keymap(defaults: Keymap, config: &KeymapConfig) -> Result<Keymap, UnknownAction> {
+    let mut merged = defaults.0;
+    for (key, action) in &config.keys {
+        if action == UNBIND {
+            merged.remove(key);
+            continue;
+        }
+        let kind: ActionKind = serde_json::from_value(serde_json::Value::String(action.clone()))
+            .map_err(|_| UnknownAction(action.clone()))?;
+        merged.insert(key.clone(), kind);
+    }
+    Ok(Keymap(merged))
+}
 
 enum Lookup {
     Match(ActionKind),
@@ -383,5 +462,59 @@ mod tests {
             Resolution::Resolved(Action::MoveDown(123)),
             "the accumulated count survives arbitrarily many pending digits"
         );
+    }
+
+    // P3.3 — default keymap + user override merge, against the five test
+    // groups in docs/plan/phase-3-tui.md.
+
+    #[test]
+    fn default_table_contains_every_listed_binding() {
+        let expected = [
+            "j", "k", "gg", "G", "0", "$", "ctrl-d", "ctrl-u", "ctrl-f", "ctrl-b", "H", "M", "L",
+            "n", "N", "/", "?", ":", "space", "v", "esc", "q",
+        ];
+        let keymap = default_keymap();
+        for token in expected {
+            assert!(
+                keymap.0.contains_key(token),
+                "missing default binding {token:?}"
+            );
+        }
+        assert_eq!(keymap.0.len(), expected.len());
+    }
+
+    #[test]
+    fn user_override_wins_over_default() {
+        let config = KeymapConfig {
+            keys: HashMap::from([("j".to_string(), "move_up".to_string())]),
+        };
+        let merged = merge_keymap(default_keymap(), &config).unwrap();
+        assert_eq!(merged.0["j"], ActionKind::MoveUp);
+    }
+
+    #[test]
+    fn override_naming_unknown_action_errors_with_the_name() {
+        let config = KeymapConfig {
+            keys: HashMap::from([("j".to_string(), "moonwalk".to_string())]),
+        };
+        let err = merge_keymap(default_keymap(), &config).unwrap_err();
+        assert_eq!(err, UnknownAction("moonwalk".to_string()));
+    }
+
+    #[test]
+    fn override_can_unbind_a_default() {
+        let config = KeymapConfig {
+            keys: HashMap::from([("j".to_string(), "unbind".to_string())]),
+        };
+        let merged = merge_keymap(default_keymap(), &config).unwrap();
+        assert!(!merged.0.contains_key("j"));
+    }
+
+    #[test]
+    fn config_with_no_keys_section_yields_exactly_the_defaults() {
+        let config: KeymapConfig = toml::from_str("").unwrap();
+        assert!(config.keys.is_empty());
+        let merged = merge_keymap(default_keymap(), &config).unwrap();
+        assert_eq!(merged, default_keymap());
     }
 }

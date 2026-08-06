@@ -732,12 +732,61 @@ current state before assuming a task's text still matches what's left to do.
 
 ---
 
+## Round 13 — 2026-08-06 · Default keymap + user override merge (P3.3)
+
+**Done:**
+
+- **P3.3** — `default_keymap()` (`crates/bam-tui/src/input/mod.rs`) builds
+  the full 22-binding v1 table from the phase doc's list. One token had no
+  home: `?` names no existing `ActionKind`, so a new variant,
+  `ActionKind::OpenHelp` / `Action::OpenHelp`, was added — a small,
+  necessary addition (P3.7's help overlay is its future consumer), not scope
+  creep, since the task's own first test bullet ("the default table contains
+  every binding listed above") is false without it. `space` needed the same
+  treatment as `Key::Esc` already got: `Key::token()` special-cases
+  `Key::Char(' ')` to `"space"` rather than emitting a literal space
+  character, matching `docs/plan/phase-3-tui.md`'s own naming of it as a
+  distinct token alongside `Esc`. `KeymapConfig { keys: HashMap<String,
+  String> }` is the `[keys]` section's shape — deliberately just that section,
+  not a full `bam.toml` aggregate struct, since highlight (P3.6) and launcher
+  (P6.3) config are later tasks' own scope to add, not this one's to
+  anticipate. `merge_keymap` layers overrides over the default table,
+  recognizing the sentinel string `"unbind"` (chosen here — no prior doc fixed
+  one) to remove a binding rather than replace it, and otherwise resolves an
+  override's action name via `ActionKind`'s own `Deserialize` (through
+  `serde_json::from_value` on a JSON string) rather than a second hand-written
+  name table that could drift from the enum. Added the `toml` crate
+  (workspace-pinned, `0.8`) as a real dependency, not just for this test: it's
+  the format every `bam.toml`-parsing task from here on (P3.3, P3.6, P6.3)
+  needs, and P3.3 is the first to actually need it, confirmed by
+  `toml::from_str::<KeymapConfig>("")` in the fifth test rather than
+  simulating "no `[keys]` section" with a bare empty `HashMap`. Promoted
+  `serde_json` from `bam-tui`'s dev-dependencies to a real dependency, since
+  `merge_keymap` (not just its tests) now calls it. Five new tests in the
+  existing inline `#[cfg(test)]` module, matching the five bullets exactly.
+
+83 tests total (5 new + 78 pre-existing). `cargo fmt --check`, `cargo clippy
+--workspace --all-targets -- -D warnings`, and the wasm32
+`--no-default-features` check (unaffected — `bam-tui` isn't part of it) all
+clean.
+
+**Deviations for the next session to know about:**
+- Added `ActionKind::OpenHelp`/`Action::OpenHelp` — not in P3.1's or P3.2's
+  enum, needed because `?` (explicitly in P3.3's binding list) had nothing to
+  bind to otherwise. No overlay logic consumes it yet; P3.7 is its intended
+  consumer.
+- The `"unbind"` sentinel string and the `[keys]`-only shape of
+  `KeymapConfig` are both this round's own design choices, not dictated by
+  `docs/input-model.md` or the phase doc — flagged in case a later task (or a
+  real `bam.toml` loader) assumes a different convention.
+
+---
+
 ## Next task
 
-**P3.3** — default keymap + user override merge: one table of default
-bindings (`j` `k` `gg` `G` `0` `$` `ctrl-d` `ctrl-u` `ctrl-f` `ctrl-b` `H` `M`
-`L` `n` `N` `/` `?` `:` `space` `v` `Esc` `q`, with counts) merged with
-`bam.toml` overrides, against the five test groups in
+**P3.4** — TUI shell and virtualized list: three panes (package list, query
+input line, detail pane) over `ratatui`, querying and rendering only the
+visible window, against the three tests in
 [phase-3-tui.md](docs/plan/phase-3-tui.md).
 
 ---

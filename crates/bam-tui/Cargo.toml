@@ -16,6 +16,5 @@ path = "src/main.rs"
 bam-core.workspace = true
 tokio.workspace = true
 serde.workspace = true
-
-[dev-dependencies]
 serde_json.workspace = true
+toml.workspace = true
