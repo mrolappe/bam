@@ -66,10 +66,8 @@ Vue for the frontend.
   `recent_sample.txt` (74 lines) and `tree_sample.txt` (381 lines), both
   committed in full.
 
-**Not yet done:** the four CI jobs have not been observed green on GitHub —
-this round didn't push and watch Actions run. Confirm on the next push
-(should be immediate, since everything is green locally with the same
-commands the workflow runs).
+All three CI jobs (`test (ubuntu-latest)`, `test (macos-latest)`, `wasm32`)
+confirmed green on GitHub Actions after the push.
 
 **Deviation for the next session to know about:** `grep` in this shell is
 aliased to `ugrep -a`-less (`-I`, skip binary), which silently returns zero
