@@ -1,0 +1,17 @@
+[package]
+name = "bam-core"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+
+[features]
+default = ["native"]
+native = ["dep:rusqlite", "dep:reqwest", "dep:tokio"]
+
+[dependencies]
+serde.workspace = true
+serde_json.workspace = true
+thiserror.workspace = true
+rusqlite = { workspace = true, optional = true }
+reqwest = { workspace = true, optional = true }
+tokio = { workspace = true, optional = true }

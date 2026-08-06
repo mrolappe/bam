@@ -1,0 +1,506 @@
+|
+| Aminet index, created on 6-Aug-2026
+|
+A2KDeck.lha                    biz/dbase  671K 999 DataBase For AMWAY Distributors done In C
+AAA_MegaBook.lha               biz/dbase  279K 999 ULTIMATE Amiga Address Book (XMas Edition
+AA_30.lha                      biz/dbase  363K 999 AddressAssist: the innovative Address-DB
+AB.lha                         biz/dbase   31K 999 Nice address book program.  V3 OS require
+ABook_10upd.lha                biz/dbase  213K 999 Powerful address database (MUI)
+ADACSearch.lha                 biz/dbase  110K 999 Example for mSQL++/ADAC
+ADB.lha                        biz/dbase  157K 999 Semplice DataBase configurabile
+ADM362.lha                     biz/dbase  550K 999 THE german address & home office tool, V3
+AFile_v403.lha                 biz/dbase  127K 999 A datafile manager
+AM_Mui1.3.lha                  biz/dbase   52K 999 A MUI application for managing addresses
+AMaster.lha                    biz/dbase  166K 999 Address database
+APrint3.2.lha                  biz/dbase  166K 999 Best address-database...
+ARC.lha                        biz/dbase  553K 999 Recipe Program inc many examples - v2
+ARTIKELFinder.lha              biz/dbase  328K 999 Amiga magazine contents database, german
+ARoute203Demo.lha              biz/dbase  540K 999 Route planning software (V2.03 german)
+AddBase.lha                    biz/dbase   10K 999 Address DB prog, good interface
+AddrFileSystem.lzh             biz/dbase   26K 999 Address filing system
+Address.lha                    biz/dbase   60K 999 Small, yet powerful address database (MUI
+AddressM2.2.lha                biz/dbase   22K 999 Yet another util for managing Addresses
+AddressMaster.lzh              biz/dbase   68K 999 Small Address Book (WB1.3+), German ONLY
+AddressSearch.lha              biz/dbase   85K 999 Address/phone/email etc. database v1.0
+Addresser.lha                  biz/dbase  115K 999 Name, address and phone # database. V2.0
+AddressitDEMO.lzh              biz/dbase   87K 999 Demo of small mail manager
+Adressen.lha                   biz/dbase   25K 999 A simple address database for 2.04+
+Albin_free.lha                 biz/dbase   82K 999 **FREE** V1.09! Best Music Database (MUI)
+AlfredAncestor.lha             biz/dbase  214K 999 Genealogy of Alfred the greats ancestors
+AlphaBase.lha                  biz/dbase  206K 999 V2.2.4 Universal database, English/German
+AlphaBase_keyfile.lha          biz/dbase    0K 957 Free keyfile for AlphaBase
+AmCat.lha                      biz/dbase   14K 999 Shareware disk cataloging program.
+AmiVideo.lha                   biz/dbase   72K 999 Database for video cassettes
+AmicForm.lha                   biz/dbase   30K 999 Create phonebook for PC-Pursuit usage. V1
+AmigaBase26.lha                biz/dbase  447K 999 Powerful programmable database with GUI
+AmigaBaseStamp.lha             biz/dbase   20K 999 Stamps exchange project, based on AmigaBa
+AmigaBaseStruk.lha             biz/dbase   13K 999 Two videotapes and a LP project, for Amig
+AmigaDataV2.lha                biz/dbase  108K 999 Database program V2.0
+Aminet2DB.lha                  biz/dbase    3K 999 Aminet RECENT, CSV, TSV converter.
+AmmoGuide.lha                  biz/dbase  118K 999 Small-Arms Ammunition Database (Requires 
+AnjouCounts.lha                biz/dbase    5K 999 Genealogy of the Counts of Anjou
+AppliGen.lha                   biz/dbase   17K 999 Application Generator for Superbase III. 
+AquaPack.lzh                   biz/dbase  541K 999 Fish database
+ArcMan15.lha                   biz/dbase   16K 999 The Archives Manager (Disk Cat Utility)
+Archie1_2.lha                  biz/dbase   86K 999 Database for magazine contents
+Archivio1_2.lha                biz/dbase   78K 999 An addresses/Phone numbers database
+Audithec.lha                   biz/dbase  227K 984 MUI AudioCD Database 1.1ß + v1.0.2
+AutoGraf.lha                   biz/dbase   40K 999 Collects & displays info on auto mileage.
+AutoKosten.lha                 biz/dbase   37K 999 A simple car cost program
+AutoRexx.lha                   biz/dbase    6K 999 ARexx PlugIns for use with DB database
+AvgObjectSize.lha              biz/dbase    3K 999 FinalCalc report from MiniSQL in ARexx
+AvidIndex96.lha                biz/dbase   63K 999 Database of Avid Publ. magazine articles
+Ax.lha                         biz/dbase  195K 999 Update! Aminet INDEX database program
+Ax_UpdateDB.lha                biz/dbase    6K 999 UpdateDB utility for Ax
+Bankn.lha                      biz/dbase  123K 999 Complete checkbook system. V1.5
+BarTender.lha                  biz/dbase   77K 999 Database of alcoholic drinks (v1.1)
+BeeBase-1.2.lha                biz/dbase  9.5M  47 Programmable relational database w/ GUI
+BlackBook.lha                  biz/dbase   29K 999 Track important phone numbers and addr.
+Black_Book.lha                 biz/dbase   40K 999 Address book written in Blitz2
+BookBase.lha                   biz/dbase   34K 999 An Easy-to-use book cataloguer
+ButlerJames.lha                biz/dbase  117K 999 Database program for address management
+CBAdress200.lha                biz/dbase  566K 999 Adressenverwaltung in MagicWB (Germany on
+CBAdress200E.lha               biz/dbase  556K 999 Adressedatabase with MagicWB (English)
+CB_Radio23b.lha                biz/dbase   30K 999 CB-Archive
+CDDatei.lha                    biz/dbase  373K 999 Database for audio compact discs, V3.12
+CDDateiIDFiles.lha             biz/dbase  229K 999 Disk-ID files for CD-Datei, Release 3
+CDDateiKey.lha                 biz/dbase    1K 999 Free Keyfile for CD-Datei
+CDDateiPL.lha                  biz/dbase    5K 999 Polish catalog for CDDatei 3.13a
+CDDateiUpdate.lha              biz/dbase   71K 999 Update V3.12/3.13 to V3.14
+CDDatei_GR_upd.lha             biz/dbase   19K 999 Greek catalog for CD-Datei V3.12.
+CDDatei_french.lha             biz/dbase    5K 999 French catalog for CD-Datei V3.12
+CDDatei_norsk.lha              biz/dbase    5K 999 Norwegian catalog for CD-Datei V3.12
+CDproV3.5.lha                  biz/dbase  226K 999 CD database, now using locale.library
+CMLV.lha                       biz/dbase   67K 999 CD-MC-LP Verwaltung (German Only!)
+CMLV_2_Conv.lha                biz/dbase   32K 999 CD-MC-LP Databaseconv
+CMLV_II_Key.lha                biz/dbase    1K 999 CMLV II Free Keyfile
+CMLV_V21.lha                   biz/dbase  231K 999 CD-MC-LP Database
+CM_V2_06.lha                   biz/dbase   50K 999 CatalogManager for Conrad Electronic cata
+Calepin.lha                    biz/dbase   58K 999 Simple "Address' Tool", MAJOR Update (MUI
+Calepin_It.lha                 biz/dbase    2K 999 Italian Catalog for Calepin
+CalorieBase.lha                biz/dbase   78K 999 Provides caloric & fat count for recipes.
+CardBase.lha                   biz/dbase   32K 999 Trading card database program.
+CardFile.lha                   biz/dbase   33K 999 Study aid card file.
+Catalog.lha                    biz/dbase  191K 999 Create a database of your disks/CDs (Fren
+Chaos.lha                      biz/dbase   45K 999 Nice address utility - V1.4 German only
+ComicMaster.lzh                biz/dbase  142K 999 Comic book collectors database
+Contact.lha                    biz/dbase   54K 999 Maintains list of names, addr, phone #'s.
+DBF.lha                        biz/dbase  162K 999 Xbase manipulation package, update
+DBF_Browser.lha                biz/dbase   51K 999 Manipulating data files in DBF format.
+DBFtoMUIbase.lha               biz/dbase   13K 999 Converts DBF file to MUIbase import file
+DBPro3_Main.lha                biz/dbase  1.2M 999 DataBase Professional 3.0, german demo
+DDBASE.lha                     biz/dbase  140K 999 Database that can view various formats. V
+DFA-26.lha                     biz/dbase  798K 999 DFA v2.6 - the definite address database 
+DFABirthdays.lha               biz/dbase   20K 999 Birthday-Checker for DFA
+DTC-CD30.lha                   biz/dbase   16K 999 Smart and easy2use database, cool design.
+DTC-MCD20.lha                  biz/dbase   32K 999 Usefoul and very userfriendly database.
+DVC2_41.lha                    biz/dbase   59K 999 Database programm with password option
+DataCLI1.1.lha                 biz/dbase   67K 999 Small DataBase with command CLI and GUI v
+DataEasy.lha                   biz/dbase   84K 999 Database program with many features. V1.3
+DataMasterDEMO.lha             biz/dbase  126K 999 Demo version of a Database program.
+DataSAT-E.lha                  biz/dbase  157K 999 Database for satellite channel (english)
+DataSATPro-r.lha               biz/dbase  229K 999 REGISTERED Database for Satellite channel
+DataSATPro.lha                 biz/dbase  163K 999 Fr-Eng Database for Satellite channel
+DataSATPro13.lha               biz/dbase  193K 999 Database for Satellite channel
+Database_RX_v1.lha             biz/dbase   10K 999 Database for prescription info
+DatabenchDemo.lha              biz/dbase  177K 999 Small Database (german)
+DeepSky.lha                    biz/dbase  631K 999 Database of 10,386 non-stellar objects. V
+DefectForm.lha                 biz/dbase    4K 999 MiniSQL defect form editor in ARexx
+Dialer2.lha                    biz/dbase   64K 999 Easy phone diary that can dial the number
+DirMaster.lha                  biz/dbase  100K 999 Nicely done disk cataloger program. V1.1
+Directory.lha                  biz/dbase   15K 999 Address database, German
+DiskArchiv.lha                 biz/dbase  121K 999 Program for managing your floppy disks. V
+DiskCat_v2.1.lha               biz/dbase   23K 999 DiskCat v2.1 is a configurable disk Libra
+DiskManager.lha                biz/dbase  466K 999 German disk manager utility
+DiskOrg.lha                    biz/dbase   67K 999 DiskOrg - A disk cataloguer (with asm sou
+EV30F.lha                      biz/dbase  140K 999 THE german video database for home VHS
+EasyVideo43.lha                biz/dbase  231K 999 Good home-video Mangement-System
+Easybase_data.lha              biz/dbase   99K 999 Easybase: Pics+logos for CD Collections
+F-BaseV2_40.lha                biz/dbase  143K 999 Easy-to-use DataBase manager for Rom 2.04
+F1db.lha                       biz/dbase  105K 999 Store and manage Formula 1 results
+FBN-OnDr.lha                   biz/dbase   72K 999 Phone directory dialer
+FLeagues.lha                   biz/dbase  120K 999 Football Database For 50 Leagues (3.5c)
+FamCon35a_demo.lha             biz/dbase  149K 999 FamilyConnections genealogy mgr demo
+Famos.lha                      biz/dbase   99K 999 German accounting and customer database
+Fastbase12.lha                 biz/dbase   53K 999 Very easy databaseprogram.
+Fdata_2001.lha                 biz/dbase   45K 999 Football2.6 - 2001/2 season Datafiles
+Fdata_Gerb1.lha                biz/dbase    5K 999 Football2.6 German Budesliga 1 datafile
+Fdata_Gerb2.lha                biz/dbase    5K 999 Football2.6 German Budesliga 2 datafile
+Fdata_Itasa.lha                biz/dbase    3K 999 Football2.6 Italian Serie A datafile
+Fdata_Itasb.lha                biz/dbase    4K 999 Football2.6 Italian Serie B datafile
+Fiasco2_11_pch.lha             biz/dbase  155K 999 Patches Fiasco 2.1 to 2.11
+FiascoPL.lha                   biz/dbase   11K 999 Fiasco 2.x - PL version by WFMH LocalePL
+Fiasco_NL_Cat.lha              biz/dbase   27K 999 Fiasco 2.21 Dutch catalogs
+Fiasco_dan_cat.lha             biz/dbase   21K 999 Danish catalog for Fiasco 2.2.
+Fiasco_deu_doc.lha             biz/dbase  334K 999 2.22 - Multifunctional database program
+Fiasco_eng_doc.lha             biz/dbase  295K 999 2.22 - Multifunctional database program
+Fiasco_main.lha                biz/dbase  536K 999 2.22 - Multifunctional database program
+Fiasco_pol_doc.lha             biz/dbase  262K 999 Polish guide for Fiasco v2.22
+FileIt.lha                     biz/dbase   31K 999 Simple portable database program. V1.0
+Football.lha                   biz/dbase  583K 999 *NEW* Setup your own leagues/cups
+FootballPatch.lha              biz/dbase  109K 999 Patches for Football 2.6
+FootballUpdate.lha             biz/dbase  241K 999 Update Football 2.5.1 to 2.5.2
+FotoBestellung.lha             biz/dbase   60K 999 Repeat ordering of photographies
+GCBAdresse3_08.lha             biz/dbase  279K 999 The Address-Database
+GCBKeys.lha                    biz/dbase    1K 999 GCB-Public-Keys
+GCBNotizV4.00.lha              biz/dbase  280K 999 The Notebook
+GCBVideoV3.11.lha              biz/dbase  324K 999 The video-administrator
+GenTree.lzh                    biz/dbase  314K 999 Genealogical/Family Tree Program. V1.5
+GenTreeFWDocs.lzh              biz/dbase  101K 999 GenTree v1.5 Documents, FinalWriter Forma
+Generator.lha                  biz/dbase    9K 999 Generats StarTrek-DUV-Infofiles
+GoalKeeper.lha                 biz/dbase   24K 999 Computer soccer administration. V1.0
+HomeCINEMA.lha                 biz/dbase  195K 999 German Video Database - with Source
+HyperBase.lha                  biz/dbase   29K 999 Nice little database management system. V
+HyperDialer.lha                biz/dbase   30K 999 Dial numbers using database, with GUI.
+Intra2_17.lha                  biz/dbase   91K 999 Simple invoice database system (V2.17)
+IntuiDex22.lha                 biz/dbase   80K 999 Update to easy club roster database
+Kalowache1_3.lha               biz/dbase  125K 999 Kalowache Version - German language only 
+Keeper.lha                     biz/dbase   93K 999 Program to catalog magazine articles
+KingFisher226.lha              biz/dbase  290K 999 KingFisher 2.26 Fish/CD-ROM Catalog Tool
+KingFisher2db.lha              biz/dbase  731K 999 1100+ Fish Disk Database for KingFisher2
+KingFisher2ex.lha              biz/dbase  216K 999 Extras (incl. DevKit) for KingFisher2.26
+KlAdr.lha                      biz/dbase  247K 999 German address database, usable demo
+KlassikAd20.lha                biz/dbase   96K 999 German address database demo
+Kulinarius06.lha               biz/dbase   54K 999 Receipe-Manager for Fiasco V0.6 (beta)
+Kulinarius06a.lha              biz/dbase    2K 999 Kulinarius-Bugfix
+LE-NAG.lzh                     biz/dbase   64K 999 Reminds you of event before you miss em
+LMProV1.02.lha                 biz/dbase  221K 999 Database for soccer, icehockey and so on
+LSD_Eng-Pol.lha                biz/dbase  208K 999 English -> Polish Dictionary for LSDictio
+LSD_Eng-Ser.lha                biz/dbase  274K 999 English -> Serbian Dictionary for LSDicti
+LSD_Idegen.lha                 biz/dbase   36K 999 Hungarian Dictionary for LSDictionary3
+LSD_Rus-Eng.lha                biz/dbase  290K 999 English -> Russian Dictionary for LSDicti
+LSD_Ser-Eng.lha                biz/dbase  264K 999 Serbian -> English Dictionary for LSDicti
+Leagues10.lha                  biz/dbase   87K 999 Football statistics program.
+Lex_Demo.lha                   biz/dbase  160K 999 German digital Lexikon for all AMIGA !
+Liga3.lha                      biz/dbase  157K 999 V 3.45 - database for soccer leagues
+Liga4.lha                      biz/dbase  185K 999 V 3.8 - database for soccer leagues
+LigaGuide.lha                  biz/dbase    7K 999 English Guide for Liga
+LigaManager_demo.lha           biz/dbase  161K 999 Fussball-Bundesliga-Manager-Demo
+List13.lha                     biz/dbase   18K 999 Generates a list of your disks.
+LoranNotebook.lha              biz/dbase  369K 999 Database for loran numbers. V?.?
+Lsdict3.lha                    biz/dbase  568K 999 The larges AMIGA Dictionary with 40+ data
+MAM-EnvPrint.lha               biz/dbase    2K 999 ARexx-Script for MAM3 to print envelopes
+MTRIIIsrc_1_10.lha             biz/dbase  421K 999 MT-RechnungIII Invoice program V1.10
+MTRIIIsrc_1_11.lha             biz/dbase  432K 999 MT-RechnungIII Invoice program V1.11
+MTRechIII_1_11.lha             biz/dbase  1.4M 999 MT-RechnungIII Invoice program V1.11
+MT_Rech_228.lha                biz/dbase   95K 999 Simple invoice program V2.28
+MUI-Leagues.lha                biz/dbase  670K 999 Over 500 leagues for MUI-Ligamaster
+MUI-LigaM-Czec.lha             biz/dbase    2K 999 Czech catalog for MUI-Ligamaster 1.20
+MUI-Ligam-nolo.lha             biz/dbase    1K 999 MUI-Ligamaster Norwegian catal
+MUI-Ligamaster.lha             biz/dbase   74K 999 A database for sport leagues
+MUI-Season9899.lha             biz/dbase   23K 999 European leagues for the season 1998-99
+MUIL-2BL74-98.lha              biz/dbase   87K 999 Complete 2.Bundesliga (74-98) with dates
+MUIL-Italiano.lha              biz/dbase    2K 999 Italian catalog for MUI-Ligamaster 1.20
+MUIL-RegL94-98.lha             biz/dbase   40K 999 Complete Regionalligen (94-98) with dates
+MUIVideo_236.lha               biz/dbase  222K 999 Video Database using Magic User Interface
+MagicAMIII_1.2.lha             biz/dbase  226K 999 German Address-Database with Locale/ARexx
+MaxonTWIST2_D.lha              biz/dbase  672K 999 German relational database system
+McA45a.lha                     biz/dbase   67K 999 *McAgenda* easy to use and useful phonebo
+McAgendaDecrypt.lha            biz/dbase    5K  28 Decrypt protected McAgenda phonebooks
+McF51.lha                      biz/dbase  147K 999 *McFiler* catalogues files, many function
+MegaB32to33Upd.lha             biz/dbase   69K 999 Very Late Update for MegaBook v3.2
+MegaBookSR1.lha                biz/dbase  145K 999 The ULTIMATE Amiga Address Book (Update)
+MicroBase504de.lha             biz/dbase  842K 999 Database supports dBASE, HTML - GERMAN
+MicroBase504en.lha             biz/dbase  444K 999 Database supports dBASE, HTML - works!
+Minidata.lha                   biz/dbase  147K 999 DataBase (German necessary)
+MoA_1.10.lha                   biz/dbase   97K 999 Module administrator. needs OS3.0
+ModuleDB_0.72b.lha             biz/dbase   54K 999 Module Database v0.72b
+MsqlLib.lha                    biz/dbase  102K 999 Access mSQL database with a shared librar
+MusicManIII.lha                biz/dbase  589K 999 A must have for CD, MC... collectors
+MusicManager.lha               biz/dbase   49K 999 Small polish CD data base for MUI. (v.1.0
+NFLStats23.lha                 biz/dbase  127K 999 Version 2.3 of NFL Stats Program
+NewTTL10.lha                   biz/dbase   15K 999 TTL and CMOS database
+OnForm_V20.lha                 biz/dbase  274K 999 Create and print invoice/order forms
+OnyxBase.lha                   biz/dbase  110K 999 Great address book manager with lots of f
+Origins2.lha                   biz/dbase  144K 999 Demo of full-featured genealogy database
+OwnWords.lha                   biz/dbase  227K 999 Dictionary system (ARexx/Commodity) DEMO
+OwnWordsFix.lha                biz/dbase   54K 999 Dictionary system (ARexx/Commodity) FIX
+PAC.lha                        biz/dbase  1.9M 999 HTML Photoalbum Creator v1.0.
+PDBase12b.lha                  biz/dbase   95K 999 Catalogue, store and retrieve files V1.2b
+PM5-Birth.lha                  biz/dbase    4K 999 PM5-plugin, Show birthdays, on Startup.
+PQL.lha                        biz/dbase  154K 999 "plain query language", a kind of SQL sub
+PSVideo21.lha                  biz/dbase  210K 999 V2.12 of the video database
+PennyWise.lha                  biz/dbase   98K 999 Flexible cashbook program with GUI.
+PhoneBase.lha                  biz/dbase   45K 999 Small PD phone number database.
+PhoneBook.lha                  biz/dbase   25K 999 Keeps track of Phone Numbers
+PhoneBookV1_8.lha              biz/dbase   32K 999 Neat Little PhoneBook program
+PhoneDir.lha                   biz/dbase   37K 999 Personal Phone Directory
+PhoneList.lha                  biz/dbase   31K 999 Simple phone list database, WB+CLI
+PhonebookV3.lha                biz/dbase   75K 999 Phonebook Version 3
+Phonebook_V2.lha               biz/dbase   38K 999 Quick Phonebook version 2. Written using 
+Phonemaster.lha                biz/dbase   51K 999 An advanced Dbase, see readme for feats.
+Pix2HP.lha                     biz/dbase   15K 999 Creates HTML galleries using MUIbase
+PopPhone_HU.lha                biz/dbase    4K 999 Hungarian translation for PopPhone v2.2.
+Quando98.lha                   biz/dbase   87K 999 Quando dateorg&phonebook(italian)
+QuickFile_3.27.lha             biz/dbase  361K 999 Powerful, fast and easy database.
+QuoteMan.lha                   biz/dbase   28K 999 V1.0 Quote and Invoice manage
+REDD_Txt.lha                   biz/dbase   24K 999 Red Dwarf StarBase-Text (52.1)
+RecipeBox22b.lha               biz/dbase   45K 999 V2.2 Recipe card organizer and printer.
+Regist_II.lha                  biz/dbase  343K 999 user-administration for programmers (Germ
+Rego.lha                       biz/dbase   17K 999 Registration manager. V1.01
+Rim.lha                        biz/dbase  527K 999 Relational Information Manager, (RDBMS).
+RoloMan11.lha                  biz/dbase  360K 999 SuperBase address & phone database.
+RoutePlanner.lha               biz/dbase  398K 999 Highway trip planner 1.7 - Needs MUI 3.2
+S-Video-2.0.lha                biz/dbase   33K 999 Video-Cassetten-Manager
+SAB-amigaos3.lha               biz/dbase   98K 752 Secure Address Book with AES encryption
+SAB-morphos.lha                biz/dbase  140K 752 Secure Address Book with AES encryption
+SAB-source.lha                 biz/dbase  109K 752 Secure Address Book with AES encryption
+SBProDemo.lha                  biz/dbase  559K 999 Trial version of Superbase Professional. 
+SN-AnlagenArc.lha              biz/dbase  100K 999 V1.0 Money units archive (Germany only)
+SN-EuroArchiv.lha              biz/dbase  711K 999 V1.3 Euro-Coin-DataBase (Germany only)
+SN-KontoArc.lha                biz/dbase   94K 999 V1.11  Accout archives (Germany only)
+SN-MarkenArc.lha               biz/dbase  189K 999 V1.0 Stamp-DataBase (Germany only)
+SN-MuenzArch.lha               biz/dbase  197K 999 V1.4 Coin-DataBase (Germany only)
+SQLMan.lha                     biz/dbase   12M  76 SQLite database manager
+SQLManSP.lha                   biz/dbase   14K 534 SQLMan spanish guide v0.4
+STDB-full_1.7.lha              biz/dbase   55K 999 Star Trek Database v1.7 (Main Exec)
+STDB.lha                       biz/dbase  630K 999 Star Trek Database - Demo v1.2
+S_Adress301.lha                biz/dbase   45K 999 Adress-Manager(Deutsch)
+S_Video35.lha                  biz/dbase   47K 999 Video-Manager(Deutsch\English)
+Scatterbrain11.lha             biz/dbase   80K 999 MUI-based project & to do list organizer
+Scion508.lha                   biz/dbase  707K 999 Genealogy database manager (V5.08)
+ScionExtras.lha                biz/dbase  122K 999 Scion Genealogist support programs
+ShimmerDB10.lha                biz/dbase   43K 999 A user configurable, flat file database
+ShimmerDB_src.lha              biz/dbase   40K 485 ShimmerDB source code
+SpaceLog.lha                   biz/dbase   66K 999 Database of space mission information. V1
+StarBase.lha                   biz/dbase  181K 999 Star Trek Episodes Database 3.0c+1.2c
+StarBase_CLI.lha               biz/dbase  104K 999 Star Trek Episodes Database (v3.8)
+StarBase_GR.lha                biz/dbase    8K 999 Greek documentation for StarBase_SCR  v 4
+StarBase_SCR.lha               biz/dbase  118K 999 Star Trek Style Database (5.2)
+Strom.lha                      biz/dbase   52K 999 Electricity consumption database in AMOS.
+StudentAid-14a.lzh             biz/dbase  160K 999 Program to help studying material
+SuperLeague351.lha             biz/dbase  253K 999 Soccer league updater/team tracker. Share
+SuperLeague4.lha               biz/dbase  140K 999 feature-packed Soccer League Database
+TB4.0.lha                      biz/dbase   79K 999 Store telephone and address information e
+TSL-2.lha                      biz/dbase  250K 999 Fast INDEX KEEPER for DJs. 3700 songs & h
+TSL_source.lha                 biz/dbase   12K 999 Source of biz/dbase/TSL-2.lha
+TelExpress2xs.lha              biz/dbase  509K 999 Database for Amiga OS 3.x by Quedex.com
+Telefonkosten.lha              biz/dbase  143K 999 Telephon Coasts Database 1.19
+Trekkie.lha                    biz/dbase  925K 999 Star Trek Database, V2.19final Data V2.21
+TurboBase_d.lha                biz/dbase  498K 999 Demo of TurboBase (german version)
+TurboBase_e.lha                biz/dbase  259K 999 Demo of TurboBase (english version)
+TwistDemo.lha                  biz/dbase  402K 999 Demo of Twist 2 Relational Database
+Twst203221.lha                 biz/dbase  322K 999 Twist 2 Amiga (English) 2.03 to 2.21 patc
+Twst204221.lha                 biz/dbase  212K 999 Twist 2 Amiga (English) 2.04 to 2.21 patc
+Twst205221.lha                 biz/dbase  211K 999 Twist 2 Amiga (English) 2.05 to 2.21 patc
+Twst207221.lha                 biz/dbase  152K 999 Twist 2 Amiga (English) 2.07 to 2.21 patc
+Twst208221.lha                 biz/dbase  137K 999 Twist 2 Amiga (English) 2.08 to 2.21 patc
+Twst211221.lha                 biz/dbase  123K 999 Twist 2 Amiga (English) 2.11 to 2.21 patc
+Twst212221.lha                 biz/dbase  124K 999 Twist 2 Amiga (English) 2.12 to 2.21 patc
+UnitedManager.lha              biz/dbase   67K 999 Manages Oberfoul or United teams.Now free
+VA_Czech.lha                   biz/dbase    3K 999 Czech Catalog for VideoArchiv v3.0
+VA_Norsk.lha                   biz/dbase    3K 999 Norwegian Catalog for VideoArchiv v3.0
+VA_V30.lha                     biz/dbase  141K 999 VideoArchiv v3.0 ** eng/ger/swe
+VArchiv_v30b.lha               biz/dbase  101K 999 VideoArchiv v3.0 !BETA-TESTERS WANTED!
+VIB_1094.lha                   biz/dbase  218K 999 Database containing info on LOTS of amiga
+VideoArchiv97.lha              biz/dbase    9K 999 VideoArchiv NEWS & QUESTIONNAIRE
+VideoArchiv_20.lha             biz/dbase  127K 999 Video-Database. Supports Locale, User-def
+VideoBase10.lha                biz/dbase   47K 999 VideoTape database program.
+VideoDB.lha                    biz/dbase   13K 999 V1.2 of a video-project for db2.10+
+VideoDat.lha                   biz/dbase   80K 999 Databank to store info about your videos.
+VideoMaster110.lha             biz/dbase   50K 999 Manages your videos komfortably
+VideoMaxe446.lha               biz/dbase  419K 999 _THE_ video database
+VideoRR.lha                    biz/dbase  144K 999 Handles your videotapes (demo, german)
+Videobaender.lha               biz/dbase   19K 999 German Videoarchiver for AmigaBase
+Videomanage.lha                biz/dbase  398K 999 A Videodatabase
+Videomat1.7.lha                biz/dbase   56K 999 Video cassette management system
+ViewCSV.lha                    biz/dbase  1.1M 647 MUI based CSV file reader
+ViewMagic_v1.lha               biz/dbase   51K 999 Database prog for managing 'Magic' cards
+VorwahlenGui.lha               biz/dbase  163K 999 MUIGUI for german telefon codes
+VowaData.lha                   biz/dbase  100K 999 Datafile v1.48 for VorwahlenGUI
+Wetterdatei12.lha              biz/dbase   35K 999 Note down the daily weather
+WhatChanged.lha                biz/dbase    6K 456 Identifies file system changes over time
+WorldDATA.lha                  biz/dbase    0K 999 WorldDATA has been renamed to AlphaBase
+WorldDataBank.lha              biz/dbase  688K 999 Plots world maps . V2.2
+Worldcup98.lha                 biz/dbase    4K 999 World Cup 98 result's
+XBaze-7.3.lha                  biz/dbase  637K 999 Very easy2use flexible and fast database
+XBaze-fr.lha                   biz/dbase   18K 989 XBaze v7.3.1 french catalog
+XBazeSP.lha                    biz/dbase   13K 755 XBaze v7.3.1 spanish catalog
+XsQL.lha                       biz/dbase   16K 999 Execute a mSQL Text-Query
+YAAddressbook.lha              biz/dbase  118K 999 Small Neat Hotkey *Address Database* 1.1
+a-gene.lha                     biz/dbase  109K 999 Genealogy database v4.18, Demo
+addiction0.8un.lha             biz/dbase   38K 999 MUI Software to manage your Magic TG card
+addidevV1.19.lha               biz/dbase  131K 999 Sourecode for Addipro in MaxonPascal
+addiproV1.22.lha               biz/dbase  116K 999 German Adress database OS2.X written in P
+addressbook.lha                biz/dbase  121K 999 Workbench Address Book for 2.04+
+adperfect.lzh                  biz/dbase   38K 999 Address keeper
+afile.lha                      biz/dbase  137K 999 A powerfull datafile manager
+agenda.lha                     biz/dbase  801K 999 Nice and easy address & phone book
+agenda_old.lzh                 biz/dbase   18K 999 Simple agenda
+agendafr.lha                   biz/dbase    0K 999 French Catalog file for AGENDA
+almanac_f3.lha                 biz/dbase  368K 999 A day to day database with lots more.
+amigadex-1_61.lzh              biz/dbase   81K 999 Disk based address book V1.61
+bBaseIII.lha                   biz/dbase  177K 999 Easily stores and retrieves information. 
+basicadr.lha                   biz/dbase   66K 999 Small german database.
+birdbase2.lha                  biz/dbase   81K 999 Database for storing bird-watching record
+blm_v1_0.lha                   biz/dbase   14K 999 Generate one big file listing for all dis
+bonappetit.lha                 biz/dbase  114K 999 recipe database manager v1.3
+carcosts.lha                   biz/dbase  116K 999 A carcost database, using MUI, version 3.
+cdbsys.lha                     biz/dbase   10K 999 C database demo v1.0
+comic.lha                      biz/dbase  203K 999 Dbase for collectors of comic books V2.1
+comixbase250.lha               biz/dbase   74K 999 Database for comics
+conjesp_norloc.lha             biz/dbase    1K 999 Norwegian local for conjesp
+cycledbase.lha                 biz/dbase   26K 999 Cycle trip database inc. search function
+dB_Editor100.lha               biz/dbase   70K 999 Editor for dBASE database files
+datagi21pd.lha                 biz/dbase  611K 999 Powerful database (only italian version).
+datasupe.lha                   biz/dbase   32K 999 Remembers names and adresses. V1.0
+db.lha                         biz/dbase  245K 999 3.5 - Multi purpose database. 15 langs!
+db2.10fr.lha                   biz/dbase  175K 999 French docs and example of DB2.10
+db3.6-beta-src.lha             biz/dbase  262K 999 V3.6 BETA - Multi purpose database. 15 la
+db3.6-beta.lha                 biz/dbase   50K 999 V3.6 BETA - Multi purpose database. 15 la
+dbStart.lha                    biz/dbase    1K 999 Starts a "db" database.
+db_fr.lha                      biz/dbase    6K 999 French translation for DB 3.5
+db_sv.lha                      biz/dbase    5K 999 Swedish translation for DB 3.5
+dfacatit.lha                   biz/dbase   10K 999 Italian catalog files for DFA v2.5 and DF
+ds11.lha                       biz/dbase   45K 999 DataStore 1.1 Free Update
+ds1r2.lha                      biz/dbase   88K 999 DataStore 1.0 Release 2 Update
+ds1r3.lha                      biz/dbase   21K 999 DataStore 1.0r3 Free update
+easybase.lha                   biz/dbase  146K 999 Beta version of a Powerful database using
+fbase106.lha                   biz/dbase   47K 999 Floppy Disk Contents Database. (Requires 
+filmlex.lha                    biz/dbase   28K 999 Movie database
+fishcat.lha                    biz/dbase   51K 999 Fish Disk catalogue searcher v1.1
+foot_vbeta.lha                 biz/dbase  146K 999 Database french soccer (foot francais) <B
+fstorage12.lha                 biz/dbase   51K 999 Librarian to manage large file collection
+germanhotels.lha               biz/dbase  519K 999 German Hotel-Guide
+ghotelpic.lha                  biz/dbase  390K 999 Pictures for German Hotel-Guide
+girubrica.lha                  biz/dbase  267K 145 Digital address book
+gkartei.lha                    biz/dbase  224K 999 Powerful and easy database.
+gkartei6.1.3.lha               biz/dbase  231K 999 Powerful and easy database.
+gsd38126.lha                   biz/dbase   37K 999 Quick-search util. for use with Sbase4
+homebank_norlo.lha             biz/dbase    2K 999 Norwegian catalog for Homebank
+hwmrarfs.lha                   biz/dbase  193K 999 Home Wine Making Recipe & Record File Sys
+icdb.lha                       biz/dbase   91K 999 Database for integrated circuits
+improcfg.lha                   biz/dbase    1K 999 Default Config for for improdem.lha
+improdem.lha                   biz/dbase  345K 999 Comprehensive Personal Information Manage
+liga.lha                       biz/dbase  176K 999 NEW data base for soccer results. (eng)
+ligamanager.lha                biz/dbase  462K 999 German database for sport leagues V3.4
+ligamanagerdat.lha             biz/dbase  206K 999 League datafiles for Ligamanager
+lsdbase.lha                    biz/dbase   41K 999 Small database program for CDIDs (v1.0)
+mSQL-20101-bas.lha             biz/dbase  796K 999 MiniSQL Database engine - base
+mSQL-20101-nse.lha             biz/dbase  377K 999 MiniSQL Database engine - nse
+mSQL-20101-src.lha             biz/dbase  336K 999 MiniSQL Database engine - src
+mSQL-20101-upd.lha             biz/dbase   26K 999 MiniSQL Database engine - update
+mSQL-20101-wse.lha             biz/dbase  392K 999 MiniSQL Database engine - wse
+mSQL-Admin.lha                 biz/dbase   73K 999 MSQL-Database Administration Tool (with G
+mb_rrAutoDocs.lha              biz/dbase    7K 999 Generates AutoDocs with MUIbase
+mb_rrWarentest.lha             biz/dbase  328K 999 Stiftung Warentest Database for MUIbase
+mb_rrfuncs.lha                 biz/dbase   20K 999 Useful include files for MUIbase v1.3+
+mca43acz.lha                   biz/dbase    5K 999 Czech catalog for database McAgenda
+mca45CAT.lha                   biz/dbase    3K 999 Catalonian catalog for database McAgenda
+mca45ESP.lha                   biz/dbase    5K 999 Spanish catalog for database McAgenda
+mdb2_0.lha                     biz/dbase  327K 999 Movie Database written in AMOS
+mfs.lha                        biz/dbase  612K 999 Music File System 1.56 - Album database
+mmanager.lha                   biz/dbase  148K 999 MusikManger 1.0 * Database for canned mus
+msql++.lha                     biz/dbase   54K 999 C++ Wrapper (V1.2) for mSQL.library (V5+)
+muil-1bl63-99.lha              biz/dbase  103K 999 Complete 1.Bundesliga (63-99)
+multidata.lha                  biz/dbase  150K 999 DataBase (German necessary)
+musicdatabase.lha              biz/dbase  128K 999 Music (CD Albums etc, Catalogger CanDo! D
+myCatalog.zip                  biz/dbase  8.6M 364 Manage your favorite collections
+pdbase_deutsch.lha             biz/dbase    3K 999 German catalog for PDBase 1.2b
+pphone22.lha                   biz/dbase   39K 999 Handy phone/address book (uses MUI)
+pphone22_CZ.lha                biz/dbase    4K 999 Czech catalog for PopPhone V2.2
+pvc1_0e.lha                    biz/dbase  153K 999 Video cataloguing system
+raconmod10.lha                 biz/dbase   28K 999 Module database v1.0, german only
+rolodex13.lha                  biz/dbase   26K 999 A great little rolodex database
+scdb_13d.lha                   biz/dbase  133K 999 SCDB - a Sound Carrier DataBase
+secret.lha                     biz/dbase   53K 999 German password protected database.
+sqldb.lzh                      biz/dbase   99K 999 Latest version of SQL rdbms
+sqlite-3.34.0.a-amiga.lha      biz/dbase   21M  31 SQL database engine
+sqlite3.lha                    biz/dbase  1.5M 999 An Embeddable SQL Database Engine
+stvideo130.lha                 biz/dbase   43K 999 Managment program for TV- & Bookseries
+tbphone.lha                    biz/dbase   22K 999 Workbench-Phone Book with Tone Dialing
+tlog.lha                       biz/dbase   88K 999 Traing Log prog.+event reminder v2.01
+tm-dbms22.lha                  biz/dbase   29K 999 ULTIMATE DB management system in Arexx
+tummy_020.lha                  biz/dbase  915K 999 The Ultimate Magic Yard V1.15
+tummy_040.lha                  biz/dbase  915K 999 The Ultimate Magic Yard V1.15
+tummy_060.lha                  biz/dbase  911K 999 The Ultimate Magic Yard V1.10
+unixODBC.lha                   biz/dbase  3.0M 275 An Open Source ODBC sub-system, WIP
+upcat13.lha                    biz/dbase   64K 999 A disk catalog program.
+ve25demo.lha                   biz/dbase  620K 999 Videographers Management System for the A
+videopro.lha                   biz/dbase  109K 999 database for video tapes (german)
+voyguide.lha                   biz/dbase  283K 999 StarTrek-Voyager-Guide
+wbase.lha                      biz/dbase   74K 999 DataBase for WB, supports PowerPacked fil
+webloadvance.lha               biz/dbase  206K 999 Weblos advancement database for SBPro v4
+A-Ontime.lha                   biz/misc     2K 999 Corrected Alarmist_OnTimeEdit.rexx
+ABank_11.lha                   biz/misc   336K 999 Accounts bank management, many options.
+ABxCD_v1.0.lha                 biz/misc   261K 999 Application builder with database capabil
+AFile_src.lha                  biz/misc   180K 479 AFile source code
+AGraph.lha                     biz/misc    91K 999 A Simple Graph Drawing Program
+AGraph_src.lha                 biz/misc    70K 479 AGraph source code
+AGraph_v36.lha                 biz/misc    50K 999 A business graphic renderer
+APalAsm.lha                    biz/misc    50K 999 Programmable Array Logic (PAL) program
+ASpice.lha                     biz/misc   156K 999 Circuit analysis program for Amiga. V5.1
+AlarmistOff.lha                biz/misc     3K 999 Close Alarmist Event Log-window after a d
+AmiBroker320.lha               biz/misc   835K 999 Advanced stock charting/analysis prog. v3
+AmiBroker337beta.lha           biz/misc   337K 965 Update AmiBroker 3.20 to 3.37 Beta
+AmiBroker_key.lha              biz/misc     1K 965 Free keyfile for AmiBroker
+AmiCFA.lha                     biz/misc   258K 999 For "Computer Flohmarkt" readers.
+AmiCash.lha                    biz/misc   191K 999 A Simple Cash Managing Program
+AmiGantt.lha                   biz/misc    86K 999 Project definition and management tool
+AmiJewel_demo.lha              biz/misc    58K 999 Jewelers program
+AmiVoice.lha                   biz/misc   142K 999 AmiVoice 2.01-Invoice/Order form creator.
+April_CAT.lha                  biz/misc     2K 933 Catalan catalog for April
+Autokaufvergleich.lha          biz/misc    36K 861 Compare purchase costs of 2 cars (german)
+BBase13aPch1.lha               biz/misc   551K 999 Patch registered BancaBase family budget
+BBase13a_Prev1.lha             biz/misc   1.3M 999 BancaBase V 13a Preview Pics. SET 1
+BBase13a_Prev2.lha             biz/misc   1.1M 999 BancaBase V 13a Preview Pics. SET 2
+BBase_020_pch.lha              biz/misc   188K 999 68020 Patch for BancaBase V1.3a REGISTERE
+BBase_030_pch.lha              biz/misc   220K 999 68030 Patch for BancaBase V1.3a REGISTERE
+BBase_040_pch.lha              biz/misc   222K 999 68040 Patch for BancaBase V1.3a REGISTERE
+BBase_060_pch.lha              biz/misc   224K 999 68060 Patch for BancaBase V1.3a REGISTERE
+BBase_SVE.lha                  biz/misc    97K 999 BancaBase SVENSKA translation
+Banca12d.lha                   biz/misc   449K 999 Family Budget Management V1.2d. Italian O
+BancaBase13.lha                biz/misc   547K 999 THE Family Budget Management.
+BancaBase13a.lha               biz/misc   685K 999 Best family budget & current account.
+Banker-0.99a.lha               biz/misc    79K 999 Home accounting program
+Banque21_Spa.lha               biz/misc    10K 999 GestaCompte Banque 2.1 Catalog en Espa ol
+BizCalc.lha                    biz/misc    38K 999 Do-it-all user friendly loan calculator. 
+BlitzBank230.lha               biz/misc   373K 999 Powerfull accounts program (4 languages)
+BondsV180.lha                  biz/misc   1.4M 999 New Release of the german Stocks-Software
+Brokerrexx.lha                 biz/misc     4K 999 ARexx scripts for use with IBrowse/AmiBro
+Buchhaltung.lha                biz/misc   181K 999 Powerfull but yet easy accounts program (
+CA100A.lha                     biz/misc    95K 999 Custom Legal Form Generator
+CBank.lha                      biz/misc    48K 999 Personnal Account Manager, OS1.3+, *1.0*
+Calendrino.lha                 biz/misc     5K  24 Calendar with Infos about a selected Day
+CheckBook.lha                  biz/misc   230K 999 Checkbook recording, balancing, etc.
+CompareInc.lha                 biz/misc   117K 999 Track income & taxes from multiple jobs
+CompteBanc213.lha              biz/misc    30K 999 MUI accounting program v2.13 (french)
+Crono_AROS.lha                 biz/misc   4.4M 106 Generator of printable calendars
+Crono_MorphOS.lha              biz/misc   4.2M 106 Generator of printable calendars
+Crono_OS4.lha                  biz/misc   4.7M 106 Generator of printable calendars
+DTC.lha                        biz/misc   100K 999 Simple calendar for appointments.
+Dohodnina01.lha                biz/misc     8K 999 Calculates income tax in Slovenia
+ELSDemo.lha                    biz/misc   313K 999 Demo of EasyLedgers Accounting Software
+EO230.lha                      biz/misc   430K 999 Everyday Organiser 2.30 MUI
+EO230Italian.lha               biz/misc    13K 999 Italian catalog for Everyday Organiser 2.
+East.lha                       biz/misc    24K 999 Organiser tool to calculate holidays
+FINANCA.lha                    biz/misc    63K 999 HERMES' Financial Utility Re-Upload
+FKM302_Demo.lha                biz/misc   450K 999 The manager for the expenses of your car.
+Fin_Accounts.lha               biz/misc   195K 999 Application for keeping track of your acc
+FinanceControl.run             biz/misc   360K 999 Demo of Finance Controller
+FinanceManager.lha             biz/misc   100K 999 Easy To Use Finance Manager V2.0 FREEWARE
+FinanceMasterD.lha             biz/misc    73K 999 Demo of a Stock Exchange program
+FinanceMasterP.lha             biz/misc    73K 999 Demo of a Stock Exchange program  (bug fi
+FondsCalc.lha                  biz/misc    84K 999 Calculation for money makers
+Funds.lha                      biz/misc    11K 999 Track prices of mutual funds or stocks.
+GeNe1_1Demo.lha                biz/misc   161K 999 Invoicing & Stock management program
+GestaBanque30.lha              biz/misc   651K 999 Accounting Suite - Suite Comptable
+GestaFacture20.lha             biz/misc   331K 999 Accounting Suite - Suite Comptable
+GestaLivre20.lha               biz/misc   330K 999 Accounting Suite - Suite Comptable
+GestaStock20.lha               biz/misc   374K 999 Accounting Suite - Suite Comptable
+WorldDATA.lha                  biz/dbase    0K 999 WorldDATA has been renamed to AlphaBase
+agendafr.lha                   biz/dbase    0K 999 French Catalog file for AGENDA
+ultraacc-key.lha               biz/misc     0K 666 UltraAccounts free keyfile
+ArexxCompiler.lha              comm/bbs     0K 999 Arexx file "compiler" for more memory.
+AWeb36b8.lha                   comm/www   1.5M  11 AWeb 3.6 â€” the Amiga web browser (Beta 
+CDL-90half.lha                 demo/aga   139K 859 90½ - 90 half - Candle Amiga Demo
+platon42-papagago.lha          demo/euro  271K 159 OCS/ECS Demo from Pågadata 2023
+saxtorp-allabarnen.lha         demo/euro  315K 159 OCS/ECS Demo from Pågadata 2023
+hardchecker1_8.lha             comm/bbs   390K 999 Uploadchecker for  PMBS (German only)
+edpwall.lha                    comm/cnet    4K 999 EDPWall.lha  Grafitti WALL program for CN
+edpwhoban2.lha                 comm/cnet    6K 999 EDPWhoBan2.lha  Multiple who banners for 
+lcp101b.lha                    comm/dlg    20K 999 DLG-LastCall Plus  v2.1b
+gcc-4.2.2-ppc-aros-cygw.tar.bz2 dev/cross   29M 916 powerpc AROS cross GCC for cygwin
+gcc-4.2.2-x86_64-cygwin.tar.bz2 dev/cross   29M 916 x86_64 AROS cross GCC for cygwin
+ptk_v2.5.1_aros_svn_635.tar.bz2 mus/edit   808K 824 Protrekkr
+ptk_v2.5.2_aros_svn_639.tar.bz2 mus/edit   808K 821 Protrekkr

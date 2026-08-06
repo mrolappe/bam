@@ -270,10 +270,7 @@ Not scheduled. Each has a concrete trigger.
 
 ## Open questions
 
-Three of `bam-handoff.md` §14's four are answered (see `PROGRESS.md`). One
-remains:
-
-- **Mirror rsync access** — unconfirmed. Requires contacting a mirror operator
-  (e.g. ftp.fau.de) to learn whether bulk rsync of `.readme` files is
-  available. Decides whether P4.3 is the bulk harvesting path or only the
-  incremental one. Worth asking well before Phase 4 starts.
+All four of `bam-handoff.md` §14's questions are now resolved (see
+`PROGRESS.md`). Mirror rsync access is decided low-priority: P4.3 is built as
+the incremental, on-demand path regardless of whether bulk access is ever
+confirmed.

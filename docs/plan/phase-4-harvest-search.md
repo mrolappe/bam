@@ -6,11 +6,12 @@
 every politeness requirement, so most tasks here are assembly against a
 checklist rather than design.
 
-> **Before the bulk run:** ask a mirror operator (e.g. ftp.fau.de) about rsync
-> access. A single `rsync --include='*.readme'` pass is dramatically more
-> mirror-friendly than 84,000 individual HTTP requests, and the answer decides
-> whether P4.3 is the bulk path or only the incremental one. Worth an email
-> well before it is worth twelve hours of someone else's bandwidth.
+> **Mirror rsync access — decided low priority (2026-08-06).** The on-demand,
+> incremental path (P4.1's queue with priority boosting for the visible
+> window) is acceptable as the baseline even if a full harvest takes several
+> hours via HTTP. P4.3 should be built as the incremental path; a bulk rsync
+> pass remains a worthwhile follow-on if access ever gets confirmed, but is no
+> longer a blocker or a prerequisite worth emailing about before Phase 4.
 
 ---
 

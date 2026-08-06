@@ -90,8 +90,15 @@ six months later when unpicking it is a project.
 **Tests first:**
 - The job is green on the empty core.
 - **Verify the check actually bites**: temporarily add an unconditional
-  `use std::process::Command;` to `bam-core/src/lib.rs`, confirm the job fails,
-  then revert. A guard nobody has seen fail is not known to work.
+  `use rusqlite::Connection;` (plus a call, so it isn't optimized away as
+  unused) to `bam-core/src/lib.rs`, confirm the job fails, then revert. A
+  guard nobody has seen fail is not known to work.
+
+> Verified 2026-08-06: `use std::process::Command;` alone does **not** fail
+> this check — `wasm32-unknown-unknown`'s std ships a real (always-erroring)
+> `std::process` module, so it type-checks fine. An unconditional `rusqlite`
+> reference is the sabotage that actually reproduces I1's failure mode, since
+> the optional dependency is absent entirely under `--no-default-features`.
 
 **Why H:** six lines of YAML. The reasoning is supplied here; the task is
 transcription.

@@ -1,0 +1,12 @@
+[package]
+name = "bam-tui"
+version = "0.1.0"
+edition.workspace = true
+rust-version.workspace = true
+
+[[bin]]
+name = "bam"
+path = "src/main.rs"
+
+[dependencies]
+bam-core.workspace = true

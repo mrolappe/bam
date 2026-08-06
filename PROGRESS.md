@@ -33,37 +33,79 @@ Vue for the frontend.
 
 ---
 
+## Round 1 — 2026-08-06 · Workspace scaffold + fixtures
+
+**Done:**
+
+- **P0.1** — Cargo workspace created: root `Cargo.toml` (resolver 2, edition
+  2024, `rust-version = "1.85"`), `crates/bam-core` (lib, `default =
+  ["native"]` gating `rusqlite`/`reqwest`/`tokio`), `crates/bam-tui` (bin
+  `bam`). All three acceptance checks pass. rusqlite pinned to `0.32` —
+  its `fts5` cargo feature doesn't exist (there's no separate toggle);
+  `bundled` alone compiles FTS5 into the amalgamation
+  (`-DSQLITE_ENABLE_FTS5` is unconditional in `libsqlite3-sys`'s bundled
+  build), so the workspace `Cargo.toml`'s `rusqlite` feature list is just
+  `["bundled"]`.
+- **P0.2** — `.github/workflows/ci.yml`: fmt/clippy/test matrix on
+  ubuntu-latest + macos-latest. Green locally; not yet observed green on a
+  GitHub runner (see below).
+- **P0.3** — wasm32 job added to the same workflow, required (not `continue-on-error`).
+  **The plan's suggested sabotage doesn't reproduce a failure**: `use
+  std::process::Command;` alone still passes `cargo check` for
+  `wasm32-unknown-unknown`, because that target's std ships a real (always-
+  erroring) `process` module rather than omitting it. Used an unconditional
+  `use rusqlite::Connection;` instead — that's the sabotage that actually
+  fails, and it's arguably the more faithful test of invariant I1 anyway.
+  Amended in `phase-0-scaffold.md`.
+- **P0.4** — Core purity test at `crates/bam-core/tests/purity.rs`, walking
+  `src/` by hand (no new dependency). All four acceptance cases verified by
+  temporary sabotage-and-revert, including the `src/store/`-exemption case.
+- **P1.1** — Fixtures fetched from `https://ftp.fau.de/aminet/` (2026-08-06):
+  `index_sample.txt` (506 lines, curated — see
+  `crates/bam-core/tests/fixtures/README.md` for exactly which lines and why),
+  `recent_sample.txt` (74 lines) and `tree_sample.txt` (381 lines), both
+  committed in full.
+
+**Not yet done:** the four CI jobs have not been observed green on GitHub —
+this round didn't push and watch Actions run. Confirm on the next push
+(should be immediate, since everything is green locally with the same
+commands the workflow runs).
+
+**Deviation for the next session to know about:** `grep` in this shell is
+aliased to `ugrep -a`-less (`-I`, skip binary), which silently returns zero
+matches on `fixtures/index_sample.txt` (detected binary, since it carries raw
+Latin-1 bytes) and would do the same on any future INDEX-derived file. Use
+`grep -a` or `perl -ne 'print if /pattern/'` against files under
+`tests/fixtures/` or real Aminet data.
+
+---
+
 ## Next task
 
-**Round 1 — P0.1–P0.4 and P1.1** (all Haiku tier).
-See [phase-0-scaffold.md](docs/plan/phase-0-scaffold.md) and
-[phase-1-ingest.md](docs/plan/phase-1-ingest.md) for the full task entries.
+**Round 2 — P1.2–P1.3** (Opus + Haiku tier).
+See [phase-1-ingest.md](docs/plan/phase-1-ingest.md) for the full task
+entries.
 
-1. **P0.1** — Cargo workspace. Root `Cargo.toml` (resolver 2, edition 2024,
-   `rust-version = "1.85"`), `crates/bam-core` (lib), `crates/bam-tui` (bin,
-   named `bam`). `bam-core` gets `default = ["native"]` with `rusqlite`,
-   `reqwest` and `tokio` behind it. Do **not** create `bam-gui`, `bam-server`,
-   `bam-mcp`, or `frontend/`.
-2. **P0.2** — CI: `cargo fmt --check`, `cargo clippy -- -D warnings`,
-   `cargo test --workspace`, on Linux **and** macOS. Windows deliberately
-   excluded.
-3. **P0.3** — wasm32 check job: `cargo check -p bam-core --target
-   wasm32-unknown-unknown --no-default-features`. **Required, not advisory.**
-   Prove it bites by temporarily adding `use std::process::Command;` to
-   `bam-core` and confirming the job fails, then revert.
-4. **P0.4** — Core purity test: a `#[test]` that fails if `rusqlite` appears
-   outside `src/store/`, or if `println!`/`eprintln!` appears anywhere in
-   `bam-core`.
-5. **P1.1** — Fixtures in `crates/bam-core/tests/fixtures/` from
-   `https://ftp.fau.de/aminet/`: a ~500-line `index_sample.txt` plus
-   `recent_sample.txt` and `tree_sample.txt`. The INDEX sample must contain
-   long filenames, descriptions with internal whitespace runs, non-ASCII bytes,
-   a zero-size entry, and the header/preamble lines. Record the source URL and
-   fetch date in `fixtures/README.md`.
+1. **P1.2** (Opus) — Schema: `landing_index_line`, `package`, `enrichment`,
+   `selection`/`selection_member`. All DDL under
+   `crates/bam-core/src/store/` (invariant I1). Three decisions that must not
+   get smoothed away: `landing_index_line.raw` is **BLOB, not TEXT**;
+   `package.date_precision` (`'week'|'exact'`, upgrade-only one-directional);
+   `enrichment` cascades on package delete but survives re-derivation of
+   `package` from `landing_index_line`. Hand over: `bam-handoff.md` §5.1,
+   §5.2, §13's encoding paragraph; invariants I1 and I7; the P1.1 fixture.
+2. **P1.3** (Haiku) — Migration runner: numbered `.sql` files under
+   `crates/bam-core/migrations/`, applied via SQLite's `user_version` pragma,
+   embedded with `include_str!`. No down-migrations. Skip `refinery` /
+   `sqlx-migrate` — a loop over embedded files is shorter.
 
-**Round 1 ends when** `cargo build --workspace` succeeds, all four CI jobs are
-green, P0.3 has been demonstrated to fail on a sabotaged tree, and the three
-fixtures are committed.
+**Round 2 ends when** the five P1.2 tests pass against a fresh database
+(round-trip insert/select on all five tables, `UNIQUE(dir, file)` rejected
+duplicate, cascade-on-delete with `PRAGMA foreign_keys = ON`, `package`
+droppable/rebuildable without touching `landing_index_line`, BLOB round-trips
+invalid UTF-8 byte-identically) and the three P1.3 tests pass (fresh DB gets
+every table, re-applying is a no-op, a DB at version N only runs migrations >
+N).
 
 ---
 
@@ -117,8 +159,7 @@ selections are **persisted and queryable**; the frontend is **Vue**.
 
 ## Still open
 
-- **Mirror rsync access** — unconfirmed. Ask a mirror operator (e.g.
-  ftp.fau.de) whether bulk rsync of `.readme` files is available. A single
-  rsync pass beats 84,000 HTTP requests. Decides whether P4.3 is the bulk
-  harvesting path or only the incremental one. Worth an email well before
-  Phase 4 — the answer takes days, the harvest takes twelve hours.
+Nothing blocking. Mirror rsync access is decided low-priority (2026-08-06):
+on-demand queueing with priority boosting is acceptable as the baseline even
+if a full incremental harvest takes several hours; see the note at the top of
+[phase-4-harvest-search.md](docs/plan/phase-4-harvest-search.md).

@@ -1,0 +1,381 @@
+new           Upload area
+biz           Business software
+biz/dbase     Database software
+biz/misc      Misc business type software
+biz/spread    Spreadsheet software
+comm          Communications
+comm/ambos    AmBoS BBS
+comm/amiex    Ami-Express BBS
+comm/bbs      BBS programs
+comm/cnet     CNET BBS
+comm/dlg      DLG BBS
+comm/fido     FIDO software
+comm/irc      Internet Relay Chat software
+comm/mail     Mailing software
+comm/maxs     MaxsBBS
+comm/mebbs    MEBBSNet BBS
+comm/misc     Misc communications
+comm/mmgr     MailManager
+comm/net      Networking
+comm/news     Newsreaders
+comm/tcp      TCP networking
+comm/term     Terminal programs
+comm/thor     Thor mail/news system
+comm/ums      Universal Message System
+comm/uucp     UUCP software
+comm/www      World Wide Web software
+comm/xeno     Xenolink BBS
+comm/yam      Yet Another Mailer
+demo          Gfx and sound demos
+demo/40k      40K intros
+demo/aga      Demos requiring AGA chipset
+demo/bse      Belgian Scene Event files
+demo/disk     Demos on diskettes
+demo/ecs      Demos for the ECS chip set
+demo/euro     Euro demos in file form
+demo/file     Single file demos
+demo/funet    From the Funet collection
+demo/intro    Intros
+demo/mag      Demo coder magazines
+demo/mega     Euro demos requiring floppies
+demo/misc     Miscellaneous demos
+demo/slide    Image oriented demos
+demo/sound    Sound oriented demos
+demo/sp96     Saturne Party 96 demos
+demo/ta95     Demos from The Assembly 95
+demo/ta96     Demos from The Assembly 96
+demo/ta97     Demos from The Assembly 97
+demo/tg93     The Gathering 1993 demos
+demo/tg95     The Gathering 1995 demos
+demo/tg96     The Gathering 1996 demos
+demo/tg97     The Gathering 1997 demos
+demo/tp92     Demos from The Party 92
+demo/tp94     Demos from The Party 94
+demo/tp95     Demos from The Party 95
+demo/tp96     Demos from The Party 96
+demo/track    Trackmos
+dev           Development software
+dev/amos      AMOS BASIC compiler
+dev/asm       Assembly language
+dev/basic     BASIC language
+dev/blitz     Blitz BASIC
+dev/c         C and C++
+dev/cross     Cross development
+dev/debug     Debugging software
+dev/e         E language
+dev/gcc       GNU C compiler
+dev/gg        Geek Gadgets GNU software
+dev/gui       GUI builders
+dev/hwood     Hollywood
+dev/lang      Various languages
+dev/lib       Static libraries
+dev/m2        Modula-2
+dev/misc      Misc development software
+dev/moni      Monitors and disassemblers
+dev/mui       MagicUserInterface
+dev/obero     Oberon related
+dev/src       Tutorial sources
+disk          Disk/Harddisk tools
+disk/bakup    Backup software
+disk/cache    Disk caching
+disk/cdrom    CD-ROM related software
+disk/misc     Various disk related tools
+disk/moni     Disk monitors
+disk/optim    Disk optimizers
+disk/salv     Disk recovery software
+docs          Text documents
+docs/anno     Announcement documents
+docs/hard     Hardware information and projects
+docs/help     Help on various issues
+docs/hyper    Hypertext documents
+docs/lists    Lists and tables
+docs/misc     Various documents
+docs/rview    Amiga product reviews
+driver        Hardware drivers
+driver/audio  Audio devices
+driver/input  Input devices
+driver/media  Storage media
+driver/moni   Monitor drivers and config files
+driver/net    Networking interfaces
+driver/other  Various drivers
+driver/print  Printers
+driver/video  Video devices
+game          Games
+game/2play    2 and more player games
+game/actio    Action games
+game/board    Board games
+game/data     Data files for games
+game/demo     Demos of commercial games
+game/edit     Game editors
+game/gag      Gag programs
+game/hint     Game hint documents
+game/jump     Jump-n-run games
+game/misc     Miscellaneous games
+game/patch    Patches for games
+game/race     Racing games
+game/role     Role, adventure games
+game/shoot    Shoot-em-up games
+game/strat    Strategy games
+game/text     Text based games
+game/think    Mind games
+game/wb       Workbench games
+gfx           Graphics software
+gfx/3d        3D graphics software
+gfx/conv      Gfx conversion tools
+gfx/arteff    ArtEffect
+gfx/edit      Paint programs
+gfx/fract     Fractals and Mandelbrots
+gfx/ifx       ImageFX related files
+gfx/misc      Misc graphics software
+gfx/pbm       Pbm+ gfx conversion
+gfx/ppaint    Personal Paint
+gfx/show      Image/anim viewers
+info          General FTP information
+info/adt      Machine readable filelists
+mags          Magazines and newsletters
+mags/1000er   IG A1000 disk magazine (German)  
+mags/5minute  GEnie Starship's 5 Minute Newscast
+mags/aaktint  Amiga Aktuell International
+mags/aguiden  Amigaguiden (Norwegian)
+mags/aio      Amiga Information Online
+mags/aktuell  Amiga Aktuell (German)
+mags/arec     Amiga Recensent (Swedish)
+mags/areport  Amiga Report newsletter
+mags/aupdate  Amiga Update newsletter
+mags/crypt    The Crypt
+mags/german   Misc. German publications
+mags/ham      Hannoversches Amiga Magazin (German)
+mags/hpool    HousePool (German)
+mags/misc     Miscellaneous magazines
+mags/noamiga  Mags dealing with non-Amiga topics
+mags/nocover  NoCover (German)
+mags/obligem  Obligement (French)
+mags/saku     Saku (Finnish)
+misc          Miscellaneous
+misc/amag     German Amiga Mag PD
+misc/antiq    Nostalgic stuff
+misc/edu      Educational software
+misc/emu      Emulations
+misc/fish     Fish disks
+misc/imdb     Internet Movie Database
+misc/kids     Children's software
+misc/math     Mathematics
+misc/misc     Uncategorizable
+misc/os       Operating systems and updates
+misc/sci      Scientific software
+misc/unix     Amiga related UNIX software
+misc/x11      Amiga X-Windows
+mods          Music modules
+mods/32bit    MP3s by 32bit choonz
+mods/4mat     Mods by 4mat
+mods/8voic    8-voiced songs
+mods/airon    Mods by Airon
+mods/alpma    Mods by Johan Alpmar
+mods/anakir   Mods by Anaki Rob
+mods/atmos    Atmospheric music
+mods/aweso    Mods by Dr Awesome
+mods/bhead    Mods by Basehead
+mods/bladr    Mods by Black Dragon
+mods/blasa    Mods by Blasa (Mauro R.)
+mods/blk      Mods by Black Shadow
+mods/blkha    Mods by Blakkhar
+mods/boing    Boing collection
+mods/boray    Mods by Boray
+mods/casef    Mods by Case and Filippetto
+mods/cato     Mods by Don Cato
+mods/cels     Mods by Celsius
+mods/chart    Module hits
+mods/chip     Mods without samples
+mods/chrom    Mods by Chromag
+mods/chryl    Mods by Chrylian
+mods/clawz    Mods by Clawz
+mods/cloud    Mods by Cloud
+mods/crash    Mods by Crash Noise Division
+mods/crn      Mods by Corrosion
+mods/csm      Mods by CSM
+mods/ctp      Mods by Counterpoint
+mods/cust     Custom mods for EaglePlayer/DT
+mods/cutc     Mods by Cutcreator
+mods/darde    Mods by Fredius Darde
+mods/dean     Mods by Dean
+mods/delor    Mods by Delorean
+mods/demo     Demo style music
+mods/dizzy    Mods by Dizzy
+mods/dlusn    Mods by D.Lusion
+mods/doh      Mods by Doh
+mods/dremr    Mods by Dreamer
+mods/dsx      Mods by DSX
+mods/elbie    Mods by Elbie
+mods/emax     Mods by Emax
+mods/ephnx    Mods by Euphonix
+mods/essen    Mods by Essential Sound
+mods/evrim    Mods by Evrimsson
+mods/exprt    Mods by Expert
+mods/facet    Mods by Facet
+mods/fby      Mods by Fabio Barzagli
+mods/fermx    Mods by Fermix
+mods/fox2     Mods by TheFoxII
+mods/funet    Funet collection
+mods/funk     Funky/jazzy mods
+mods/grogo    Mods by Grogon
+mods/hardc    Hardcore techno
+mods/hje      Mods by H.J.Ehrentraud
+mods/huezo    Mods by Huezo
+mods/house    House modules
+mods/hw       Mods by Hillware
+mods/ijont    Mods by Ijon Tichy
+mods/inst     Instruments for modules
+mods/instr    Instrumental music
+mods/jazzc    Mods by Jazzcat
+mods/jogei    Mods by Jogeir Liljedahl
+mods/jorma    Mods by Da Jormas (techno)
+mods/jungl    Jungle/Breakbeat mods
+mods/k4k      Mods by k4k
+mods/kaa      Mods by Redd Kaa
+mods/kicko    Mods by Kicko
+mods/lead     Mods by Lead
+mods/mark     Mods by Mark Salud
+mods/maxym    Mods by Maxym
+mods/med      MED modules
+mods/melod    Melodic modules
+mods/melom    Mods by MeloManiac
+mods/midi     Music in MIDI format
+mods/misc     Miscellaneous songs
+mods/mnc      Mods by Meanace
+mods/moods    Music for your instincts
+mods/mpg      Music in MPEG audio format
+mods/mryo     Mods by Mr. Yo
+mods/mvp      Mods by MoPlayaz
+mods/ncase    Mods by Nutcase
+mods/neuro    Neurodancer's modules
+mods/nkn      Mods by Night Knight
+mods/nork     Mods by Nork
+mods/ooze     Mods by Ooze
+mods/otis     Mods by Otis
+mods/panik    Mods by Panik
+mods/pdy      Mods by Prodigy
+mods/pete     Mods by Pirate Pete
+mods/piano    Piano mods
+mods/pop      Pop music
+mods/pro      Protracker songs
+mods/przk     Mods by Parsec
+mods/punn     Mods by Punnik
+mods/purg     Mods by Purgatory
+mods/racoo    Mods by Racoon
+mods/rated    Misc rated modules
+mods/rock     Rock'n'Roll
+mods/roz      Mods by Roz
+mods/s3m      Multichannel s3m mods
+mods/sbc      Modules by Substance
+mods/sets     Module collections
+mods/sidew    Mods by Sidewinder
+mods/slc      Mods by Slice
+mods/slow     Slow, melodic modules
+mods/smpl     Sound samples
+mods/smg      Mods by esemgy
+mods/sonor    Mods by Sonority
+mods/spark    Mods by P.D. Spark
+mods/stame    Mods by Stamen
+mods/stun     Mods by Stun
+mods/symph    Symphonie modules
+mods/synth    Synthesizer modules
+mods/techn    Techno music
+mods/toady    Mods by Olivier Gonneau
+mods/tranc    Trance techno mods
+mods/tp96     Mods from The Party 1996
+mods/uns      Mods by UnIsOn
+mods/uprgh    Mods by Up Rough Soundsystem
+mods/vdo      Mods by Voodoo Audio Group
+mods/voice    Music with voices
+mods/voy      Mods by Voyager
+mods/wmr      Mods reviewed by WMR
+mods/xceed    Mods by X-Ceed (ex Snoopy)
+mods/xm       Multichannel xm mods
+mus           Musical software
+mus/edit      Composing software
+mus/midi      MIDI software
+mus/misc      Miscellaneous
+mus/play      Sound players
+pix           Pictures
+pix/3dani     3D animations
+pix/3dobj     3D objects
+pix/addic     Pictures by 3DAddict
+pix/anim      Animations
+pix/art       Hand drawn imagery
+pix/astro     Astronomy pictures
+pix/back      Workbench backdrop pictures
+pix/bill      Bill Graham traces
+pix/boot      Boot pictures
+pix/clip      Clip art
+pix/eps       Structured EPS images
+pix/eric      Eric Schwartz anims
+pix/fauna     Animals
+pix/fract     Fractals
+pix/gicon     GlowIcons
+pix/glenn     Traces by Glenn J. Schworak
+pix/guard     Guardians traces
+pix/heiko     Traces by Heiko Popp
+pix/henz      Traces by Patrick Henz
+pix/icon      Workbench icons
+pix/illu      Illustrations
+pix/imagi     Imagine traces
+pix/irc       The people on IRC
+pix/jake      The Ragtime Gallery
+pix/jason     Jason Brown illustration
+pix/map       Images of maps
+pix/mark      Traces by Markus Kuhnen
+pix/misc      Miscellaneous images
+pix/mpg       MPEG animations
+pix/mwb       MagicWB icons
+pix/nevil     Pics by Neville Rolle
+pix/nicon     NewIcons
+pix/park      Maps of US national parks
+pix/picon     PNG icons
+pix/real3     Real3D traces
+pix/sport     Sports pictures
+pix/textu     Textures
+pix/theme     Themes and skins
+pix/tp96      Pics from The Party 1996
+pix/trace     Raytraced pictures
+pix/unrl      Animations by Unreal
+pix/vehic     Vehicle images
+pix/views     Scenery, countries
+pix/wb        Example WB screens
+text          Text related
+text/bfont    Bitmap font collection
+text/dtp      Desktop publishing
+text/edit     Editors
+text/font     Font tools
+text/fwrit    Final Writer
+text/hyper    Hypertext tools
+text/ifont    Intellifont collection
+text/misc     Misc text software
+text/pfont    Postscript font collection
+text/print    Printing tools
+text/show     Text viewers
+text/tex      TeX formatting package
+text/tfont    Truetype font collection 
+util          Utilities
+util/app      Appicons, appwindows
+util/arc      Archivers
+util/batch    Script software
+util/blank    Screen blankers
+util/boot     Startup sequence software
+util/cdity    Commodity type software
+util/cli      CLI tools
+util/conv     File conversion
+util/crypt    Encryption tools
+util/dir      Directory utilities
+util/dopus    Directory Opus
+util/dtype    Datatypes
+util/libs     Libraries
+util/misc     Miscellaneous
+util/moni     System monitors
+util/mouse    Mouse related tools
+util/pack     Packers
+util/rexx     AREXX tools
+util/shell    Shells
+util/sys      Replacements for system components
+util/time     Clocks and timing
+util/virus    Virus checkers
+util/wb       Workbench utilities

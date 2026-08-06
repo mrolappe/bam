@@ -1,0 +1,74 @@
+|
+| Aminet index, created on 6-Aug-2026
+|
+
+amiworp-lua550-os3.lha         dev/lang   1.0M   0 Current Lua language runtime
+MCC_TabGroup.lha               dev/mui     95K   0 Dynamic tab group custom class for MUI
+Amifish_MorphOS.lha            game/board 3.4M   0 Chess program UCI compatible
+AmiArcadia-OS4.lha             misc/emu    12M   0 Signetics-based machines emulator
+AmiArcadia.lha                 misc/emu    11M   0 Signetics-based machines emulator
+Amico8.lha                     misc/emu   508K   0 PICO-8 fantasy console emulator
+make.lha                       misc/emu   155K   0 Fantasy 8 bit style retro machine
+Weather13.lha                  util/misc   23K   0 Online Weatherstation 1.3 compatible
+
+sana2loop.lha                  comm/net   113K   0 Hardware-free SANA-II loopback device
+Amelinium.lha                  comm/www   3.7M   0 Modern Amiga Web Browser with JS
+imploder.lha                   dev/misc   287K   0 Imploder exe/data cruncher/decruncher
+tucanstudio-amiga.lha          dev/misc   8.4M   0 a native IDE for AmigaOS (RTG)
+spOokyLive3.0.lha              mus/play   144K   0 Amiga Amp skin by spOoky^iSi.
+BrotherOfAmiga.png             pix/misc   2.7M   0 Brother of Amiga
+pOS_A4000.jpg                  pix/misc   1.4M   0 A4000 Emulator
+TreeExplorer.lha               util/dir   554K   0 A simple filemanager
+
+TheWire13.lha                  comm/tcp   143K   0 lightweight TCP/IP stack
+pdp10-its-disassembler.lha     dev/cross  7.0M   0 Tools for analysing PDP-10 ITS files
+am-git.lha                     dev/misc   1.6M   0 git client (clone/commit/push/pull)
+rkrm-dos.pdf                   docs/misc  1.7M   0 RKRM AmigaDOS
+l2boot.lha                     driver/media  10K   0 net-boot with PCMCIA 3Com Etherlink III
+BatteryGauge.lha               driver/other  48K   0 Battery Gauge for WinUAE64.exe
+anaiis_hostusb.lha             driver/other 240K   0 ANAIIS drivers for WinUAE64.exe
+pVision.lha                    driver/video  10K   0 pVision P96 driver
+CFish_MorphOS.lha              game/board 343K   0 Strong UCI chess engine
+3DToolbox_v0.4.lha             gfx/3d     1.1M   0 3D print toolbox for Amiga
+AmiFetch.lha                   util/misc   13K   0 System info with spinning Boing ball
+
+CompunetReborn.lha             comm/tcp   123K   0 client for the Compunet Reborn service
+PocketLauncher.lha             game/misc  143K   0 WHDLoad game launcher (no MUI needed)
+spOokyAMP2.3.lha               mus/play   130K   0 Amiga Amp skin by spOoky^iSi.
+avalanche_de.lha               util/arc     9K   0 German catalog for Avalanche
+avalanche_guide_de.lha         util/arc    11K   0 German translation of Avalanche.guide
+
+TelegramAmiga-AROS.lha         comm/tcp   316K   0 Native MTProto Telegram chat client
+TelegramAmiga-AROS64.lha       comm/tcp   421K   0 Native MTProto Telegram chat client
+TelegramAmiga-MOS.lha          comm/tcp   443K   0 Native MTProto Telegram chat client
+TelegramAmiga-OS4.lha          comm/tcp   413K   0 Native MTProto Telegram chat client
+TelegramAmiga.lha              comm/tcp   295K   0 Native MTProto Telegram chat client
+amiworp-lua550.lha             dev/lang   1.0M   0 Lua 5.5.0 runtime and SDK for AmigaOS
+REDPILLGameCreator.lha         dev/misc   8.7M   0 Game Creator with AGA support
+Avalanche_FR.lha               util/arc     8K   0 French catalog for Avalanche 4.1
+LumiPass.lha                   util/crypt 6.1M   0 Password manager with 2FA (TOTP/HOTP)
+VATestprogram.zip              util/misc   12M   0 Versatile Amiga Testprogram
+
+MortPhilOCS.lha                game/jump  726K   0 Mort & Phil
+Chess_AI_OS4.lha               game/think 791K   0 OS4 chess for AmigaOS 4.1 (PPC/RTG)
+PlasmaWB.lha                   gfx/misc   206K   0 Menu/full-screen Workbench plasma
+avalanche.lha                  util/arc   161K   0 ReAction unarchive GUI for xfd/xadmaster
+amipkg.lha                     util/sys   390K   0 Package manager for AmigaOS 3.x
+
+Fitz.lha                       comm/tcp   288K   1 Light TCP/IP file server and mounter
+F1GP2026Carset.lha             game/data    9K   1 2026 Carset for F1GP
+BenchTrash.lha                 util/wb    202K   1 Global trashcan for WB, eject support
+
+fidoblitz.lha                  comm/fido   93K   1 FidoBlitz - Binkp/1.1 Mailer for Amiga
+MiniFTPD.lha                   comm/tcp    18K   1 lightweight FTP Server OS1.3 compatible
+SDL2-NovaMesa.lha              dev/lib    2.5M   1 RTG port of the SDL2 audio/video library
+ODFileSystem-amigaos4.lha      disk/cdrom 300K   1 Modern optical-disc filesystem for OS4
+ODFileSystem.lha               disk/cdrom 208K   1 Modern optical-disc filesystem
+Park.lha                       disk/misc    7K   1 Park devices and loads and ejects media
+lide-update.lha                driver/media 123K   1 Open Source IDE Driver
+FreeSynd_RTG.lha               game/strat 3.8M   1 Amiga port of Syndicate (FreeSynd)
+ltx-cutils.lha                 util/cli    29K   1 Unix-style ls,cp,mv,mkdir,rm for AmigaDOS
+ltx-ccon.lha                   util/shell  53K   1 CCon v1.2.6 - Ultimate CON Replacement
+MagicMenu_3.lha                util/wb    259K   1 Pop-up, sticky and transparent menus
+
+Polanie-RTG-amiga.lha          game/strat 417K   1 Polanie (1996) Amiga RTG PORT
