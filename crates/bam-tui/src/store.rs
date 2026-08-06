@@ -40,6 +40,19 @@ pub trait PackageStore {
     /// so the caller can render the error under the offending byte range.
     fn parse(&self, src: &str) -> Result<Predicate, ParseError>;
 
+    /// Parses `src` through the query language named by `lang` (`None` =
+    /// the registry default) — the highlight engine's per-rule parse (P3.8,
+    /// invariant I3). Returns a flat [`StoreError`] rather than [`parse`]'s
+    /// span-carrying [`ParseError`]: a highlight rule's error is reported as
+    /// one line per rule, not an inline caret under a byte offset.
+    fn parse_lang(&self, lang: Option<&str>, src: &str) -> Result<Predicate, StoreError>;
+
+    /// Restricts `pred`'s matches to `ids` (P3.8): a highlight rule only
+    /// needs to know which of the *currently visible* rows it hits, not the
+    /// whole table. Called with `ids: &[]` as a load-time validation trial —
+    /// does the predicate compile at all? — without touching a real row.
+    fn matching_ids(&self, pred: &Predicate, ids: &[i64]) -> Result<Vec<i64>, StoreError>;
+
     // ---- selections (P3.6, invariant I7) — all delegate to P2.7's API;
     // no selection membership is ever computed or cached by the TUI itself.
 
@@ -89,6 +102,7 @@ impl PackageStore for SessionStore {
             &self.session,
             &api::ParseQueryRequest {
                 src: src.to_string(),
+                lang: None,
             },
         )
         .map(|resp| resp.predicate)
@@ -99,6 +113,30 @@ impl PackageStore for SessionStore {
                 span: None,
             },
         })
+    }
+
+    fn parse_lang(&self, lang: Option<&str>, src: &str) -> Result<Predicate, StoreError> {
+        api::parse_query(
+            &self.session,
+            &api::ParseQueryRequest {
+                src: src.to_string(),
+                lang: lang.map(str::to_string),
+            },
+        )
+        .map(|resp| resp.predicate)
+        .map_err(|e| StoreError(e.to_string()))
+    }
+
+    fn matching_ids(&self, pred: &Predicate, ids: &[i64]) -> Result<Vec<i64>, StoreError> {
+        api::filter_ids(
+            &self.session,
+            &api::FilterIdsRequest {
+                predicate: pred.clone(),
+                ids: ids.to_vec(),
+            },
+        )
+        .map(|resp| resp.ids)
+        .map_err(|e| StoreError(e.to_string()))
     }
 
     fn toggle(&self, package_id: i64) -> Result<bool, StoreError> {

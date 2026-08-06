@@ -39,6 +39,11 @@ pub fn render(app: &App<impl PackageStore>, frame: &mut Frame) {
         frame.render_widget(Paragraph::new(format!(":{}", app.command_text())), rows[1]);
     } else if let Some(status) = app.status() {
         frame.render_widget(Paragraph::new(status.to_string()), rows[1]);
+    } else if !app.highlight_errors().is_empty() {
+        // Lowest-priority row content: a highlight rule that failed to
+        // resolve (P3.8) is reported here rather than aborting the reload
+        // or disabling the other rules.
+        frame.render_widget(Paragraph::new(app.highlight_errors().join("; ")), rows[1]);
     }
 
     let start = app.window_start();

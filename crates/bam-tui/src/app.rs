@@ -3,6 +3,7 @@
 //! re-querying [`PackageStore`] only when the cursor would move outside the
 //! currently loaded window.
 
+use std::path::PathBuf;
 use std::time::{Duration, Instant};
 
 use bam_core::api::{SelectionMode, SelectionSummary};
@@ -11,6 +12,7 @@ use bam_core::query::ir::{FieldId, Pattern, Predicate};
 use bam_core::query::lang::ParseError;
 use bam_core::store::tables::Package;
 
+use crate::rules::HighlightRules;
 use crate::store::{PackageStore, StoreError, WindowResult};
 
 /// P3.5's debounce window: rapid keystrokes reset this deadline instead of
@@ -49,6 +51,15 @@ pub struct App<S: PackageStore> {
     debounce_deadline: Option<Instant>,
     command_text: String,
     status: Option<String>,
+    /// `[[highlight]]` rules (P3.8); [`HighlightRules::empty`] until
+    /// [`Self::set_highlight_config`] wires a real `bam.toml` path in — no
+    /// caller is required to opt in.
+    rules: HighlightRules,
+    /// Which rules (by index into `rules.rules()`) hit each window-local
+    /// row — a rendering cache refreshed alongside `marked` whenever the
+    /// window or the rule set changes, same relationship P3.6's `marked`
+    /// already has to the working selection.
+    rule_hits: Vec<Vec<usize>>,
 }
 
 impl<S: PackageStore> App<S> {
@@ -60,6 +71,8 @@ impl<S: PackageStore> App<S> {
         let viewport_len = viewport_len.max(1);
         let window = store.window(&predicate, 0, viewport_len)?;
         let marked = Self::fetch_marked(&store, &window)?;
+        let rules = HighlightRules::empty();
+        let rule_hits = Self::compute_rule_hits(&store, &window, rules.rules())?;
         Ok(Self {
             store,
             predicate,
@@ -74,6 +87,8 @@ impl<S: PackageStore> App<S> {
             debounce_deadline: None,
             command_text: String::new(),
             status: None,
+            rules,
+            rule_hits,
         })
     }
 
@@ -85,9 +100,49 @@ impl<S: PackageStore> App<S> {
             .collect()
     }
 
-    fn refresh_marked(&mut self) -> Result<(), StoreError> {
+    /// Which rules hit each window-local row (P3.8): empty when `rules` is
+    /// empty (the common case before [`Self::set_highlight_config`] is ever
+    /// called), so no store call happens for an app with no configured
+    /// rules.
+    fn compute_rule_hits(
+        store: &S,
+        window: &WindowResult,
+        rules: &[crate::rules::Rule],
+    ) -> Result<Vec<Vec<usize>>, StoreError> {
+        let ids: Vec<i64> = window.packages.iter().map(|p| p.id).collect();
+        let mut hits = vec![Vec::new(); ids.len()];
+        for (ri, rule) in rules.iter().enumerate() {
+            let matched = store.matching_ids(&rule.predicate, &ids)?;
+            for id in matched {
+                if let Some(pos) = ids.iter().position(|&x| x == id) {
+                    hits[pos].push(ri);
+                }
+            }
+        }
+        Ok(hits)
+    }
+
+    fn refresh_row_caches(&mut self) -> Result<(), StoreError> {
         self.marked = Self::fetch_marked(&self.store, &self.window)?;
+        self.rule_hits = Self::compute_rule_hits(&self.store, &self.window, self.rules.rules())?;
         Ok(())
+    }
+
+    /// Wires `bam.toml`'s `[[highlight]]` rules (P3.8) into this app,
+    /// loading them immediately and polling for changes on every subsequent
+    /// [`Self::tick`]. Never called by [`Self::new`] itself — a caller that
+    /// never calls this keeps the exact pre-P3.8 behaviour (no rules, no
+    /// polling cost beyond one `Option` check per tick).
+    pub fn set_highlight_config(&mut self, path: impl Into<PathBuf>) -> Result<(), StoreError> {
+        self.rules = HighlightRules::load(path, &self.store);
+        self.refresh_row_caches()
+    }
+
+    /// Messages for rules that failed to resolve (unregistered `lang`, or a
+    /// `when` the language rejected) — reported here rather than aborting
+    /// the reload or disabling the other rules.
+    pub fn highlight_errors(&self) -> &[String] {
+        self.rules.errors()
     }
 
     pub fn query_text(&self) -> &str {
@@ -111,6 +166,9 @@ impl<S: PackageStore> App<S> {
     /// (the "keep last valid result set" rule) and is recorded for the UI
     /// to render instead.
     pub fn tick(&mut self, now: Instant) -> Result<(), StoreError> {
+        if self.rules.poll(now, &self.store) {
+            self.refresh_row_caches()?;
+        }
         let Some(deadline) = self.debounce_deadline else {
             return Ok(());
         };
@@ -125,7 +183,7 @@ impl<S: PackageStore> App<S> {
                 self.cursor = 0;
                 self.top = 0;
                 self.window = self.store.window(&self.predicate, 0, self.viewport_len)?;
-                self.refresh_marked()?;
+                self.refresh_row_caches()?;
             }
             Err(e) => self.query_error = Some(e),
         }
@@ -188,7 +246,7 @@ impl<S: PackageStore> App<S> {
         self.window = self
             .store
             .window(&self.predicate, self.top, self.viewport_len)?;
-        self.refresh_marked()
+        self.refresh_row_caches()
     }
 
     pub fn visible_marked(&self) -> &[bool] {
@@ -196,10 +254,10 @@ impl<S: PackageStore> App<S> {
     }
 
     /// Conflict-resolved semantic tokens (P3.7, `bam-handoff.md` §11.1) for
-    /// the row at window-local index `idx`. Marked state (I7) is emitted as
-    /// a [`Decoration`] like any other rule/provider output and resolved
-    /// through the same [`highlight::resolve`] path, not special-cased —
-    /// P3.8's DSL-rule decorations will join this same list once they exist.
+    /// the row at window-local index `idx`. Marked state (I7) and every
+    /// `[[highlight]]` rule that hit this row (P3.8) are each emitted as a
+    /// [`Decoration`] and resolved through the same [`highlight::resolve`]
+    /// path — no special-casing either source.
     pub fn row_tokens(&self, idx: usize) -> RowTokens {
         let mut decorations = Vec::new();
         if self.marked.get(idx).copied().unwrap_or(false) {
@@ -209,6 +267,13 @@ impl<S: PackageStore> App<S> {
                 background: None,
                 priority: highlight::MARKED_PRIORITY,
             });
+        }
+        if let Some(hits) = self.rule_hits.get(idx) {
+            for &ri in hits {
+                if let Some(rule) = self.rules.rules().get(ri) {
+                    decorations.push(rule.decoration.clone());
+                }
+            }
         }
         highlight::resolve(&decorations)
     }
@@ -248,7 +313,7 @@ impl<S: PackageStore> App<S> {
         for pkg in &range.packages {
             self.store.mark(pkg.id)?;
         }
-        self.refresh_marked()
+        self.refresh_row_caches()
     }
 
     pub fn command_text(&self) -> &str {
@@ -288,7 +353,7 @@ impl<S: PackageStore> App<S> {
             }
             "load" => {
                 self.store.load(rest)?;
-                self.refresh_marked()?;
+                self.refresh_row_caches()?;
                 Ok(CommandOutcome::Loaded)
             }
             "selections" => Ok(CommandOutcome::Selections(self.store.list_selections()?)),
@@ -306,7 +371,7 @@ impl<S: PackageStore> App<S> {
             .parse(query_src)
             .map_err(|e| StoreError(e.message))?;
         let count = self.store.select_by_query(&pred, mode)?;
-        self.refresh_marked()?;
+        self.refresh_row_caches()?;
         Ok(CommandOutcome::MemberCount(count))
     }
 }

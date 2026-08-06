@@ -57,6 +57,16 @@ impl PackageStore for FakeStore {
         Ok(Predicate::FullText(src.to_string()))
     }
 
+    // P3.8 grew the trait with highlight-rule operations (see
+    // tui_highlight.rs); unused placeholders here, same as `parse` above —
+    // `App::new` never calls them for an app with no highlight config wired.
+    fn parse_lang(&self, _lang: Option<&str>, src: &str) -> Result<Predicate, StoreError> {
+        Ok(Predicate::FullText(src.to_string()))
+    }
+    fn matching_ids(&self, _pred: &Predicate, _ids: &[i64]) -> Result<Vec<i64>, StoreError> {
+        Ok(Vec::new())
+    }
+
     // P3.6 grew the trait with selection operations (see tui_selection.rs);
     // unused placeholders here, same as `parse` above. `is_marked` must
     // still return `Ok` rather than panic — `App::new` calls it for every

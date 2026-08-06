@@ -71,18 +71,24 @@ async fn main() -> ExitCode {
     }
 }
 
-/// Loads the `[keys]` section of `bam.toml` if the config file exists,
-/// merging it over [`default_keymap`]; a missing file yields exactly the
-/// defaults (P3.3's fifth test bullet, re-applied here to real config
-/// loading rather than a value built by hand).
-fn load_keymap(flags: &[String]) -> bam_tui::input::Keymap {
-    let config_path = flags
+/// Resolves the `bam.toml` path once — `--config`, or [`default_config_path`]
+/// — shared by [`load_keymap`]'s `[keys]` section and P3.8's `[[highlight]]`
+/// rules, both sections of the same file.
+fn resolve_config_path(flags: &[String]) -> String {
+    flags
         .iter()
         .position(|a| a == "--config")
         .and_then(|i| flags.get(i + 1))
         .cloned()
-        .unwrap_or_else(default_config_path);
-    let config: KeymapConfig = std::fs::read_to_string(&config_path)
+        .unwrap_or_else(default_config_path)
+}
+
+/// Loads the `[keys]` section of `bam.toml` if the config file exists,
+/// merging it over [`default_keymap`]; a missing file yields exactly the
+/// defaults (P3.3's fifth test bullet, re-applied here to real config
+/// loading rather than a value built by hand).
+fn load_keymap(config_path: &str) -> bam_tui::input::Keymap {
+    let config: KeymapConfig = std::fs::read_to_string(config_path)
         .ok()
         .and_then(|s| toml::from_str(&s).ok())
         .unwrap_or_default();
@@ -289,7 +295,12 @@ fn tui(flags: &[String]) -> ExitCode {
             return ExitCode::FAILURE;
         }
     };
-    let mut resolver = Resolver::new(load_keymap(flags));
+    let config_path = resolve_config_path(flags);
+    if let Err(e) = app.set_highlight_config(&config_path) {
+        eprintln!("failed to evaluate highlight rules: {e}");
+        return ExitCode::FAILURE;
+    }
+    let mut resolver = Resolver::new(load_keymap(&config_path));
 
     if enable_raw_mode().is_err() {
         eprintln!("failed to enable raw mode (is this a real terminal?)");

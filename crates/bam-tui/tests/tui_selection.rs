@@ -63,6 +63,16 @@ impl PackageStore for FakeStore {
         Ok(Predicate::FullText(src.to_string()))
     }
 
+    // P3.8 grew the trait with highlight-rule operations (see
+    // tui_highlight.rs); unused placeholders here since these tests never
+    // wire a highlight config in.
+    fn parse_lang(&self, _lang: Option<&str>, src: &str) -> Result<Predicate, StoreError> {
+        Ok(Predicate::FullText(src.to_string()))
+    }
+    fn matching_ids(&self, _pred: &Predicate, _ids: &[i64]) -> Result<Vec<i64>, StoreError> {
+        Ok(Vec::new())
+    }
+
     fn toggle(&self, package_id: i64) -> Result<bool, StoreError> {
         let mut marked = self.marked.borrow_mut();
         if marked.remove(&package_id) {

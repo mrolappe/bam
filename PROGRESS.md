@@ -1118,14 +1118,142 @@ unaffected by this round's TUI-only rendering change.
 
 ---
 
+## Round 18 — 2026-08-06 · Highlight rules with hot reload (P3.8)
+
+**Done:**
+
+- **P3.8** — `Session` (`crates/bam-core/src/store/session.rs`) gained a
+  `langs: LanguageRegistry` field (built in `from_connection` — `bam-dsl` the
+  only registered id, same as before, but now through the actual P2.2
+  registry instead of a hardcoded `BamDsl.parse` call), `parse_query_lang`
+  (`lang: Option<&str>` selects the language, `SessionError::Language(
+  #[from] LanguageError)` new), and `matching_ids_among(pred, ids)` — matches
+  restricted to a caller-supplied id list rather than the whole table, so the
+  highlight engine only asks about the currently *visible* rows. Deliberately
+  compiles regardless of whether `ids` is empty (checks `ids.is_empty()`
+  *after* `compiled_for`, not before) so `ids: &[]` doubles as a load-time
+  validation trial — catches a predicate that parses fine but doesn't compile
+  (`Similar`, not yet supported) without needing a real row. `bam_core::api`
+  gained `filter_ids` (`api/query.rs`) wrapping it, and `ParseQueryRequest`
+  gained a `#[serde(default)] lang: Option<String>` field (`api/types.rs`) —
+  the two existing call sites (`api::query::parse_query` itself,
+  `bam-tui`'s `SessionStore::parse`) updated to pass `lang: None`.
+
+  `bam-tui`'s `PackageStore` trait (`crates/bam-tui/src/store.rs`) gained
+  `parse_lang` and `matching_ids`, both thin `SessionStore` pass-throughs to
+  the new API calls — `parse_lang` returns a flat `StoreError` rather than
+  `parse`'s span-carrying `ParseError`, since a highlight rule's error is
+  reported as one line per rule, not an inline caret under a byte offset.
+
+  New module `crates/bam-tui/src/rules.rs`: `HighlightRules` parses
+  `[[highlight]]` blocks (`RuleConfig`: `name`, `lang`, `when`, `gutter`,
+  `badge`, `background`, `priority` — the phase doc's shape verbatim) via
+  `toml`, compiling each `when` through `store.parse_lang` and validating it
+  through `store.matching_ids(&pred, &[])` (the empty-trial-compile use of
+  the method above); a rule that fails either step is dropped and its
+  message (`"{name}: {error}"`) recorded in `errors()` instead of aborting
+  the reload — one bad rule cannot disable the others. Watched by **polling
+  file content**, not a filesystem-event crate (`notify` was never added):
+  nothing here needs more than "did the bytes change," and content-diffing
+  sidesteps `mtime` granularity flakiness a real notify-based test would
+  have to work around. `poll(now, store)` reuses P3.5's own debounce shape —
+  a content change starts a timer, a *different* change while pending resets
+  it (same as query-line edits), and only content that has held steady for
+  `RELOAD_DEBOUNCE` (300ms) triggers a reload, so two rapid writes from one
+  editor save collapse into one.
+
+  `App` (`crates/bam-tui/src/app.rs`) gained `rules: HighlightRules`
+  (`HighlightRules::empty()` until wired) and `rule_hits: Vec<Vec<usize>>` —
+  a rendering cache, same relationship P3.6's `marked` already has to the
+  working selection, refreshed alongside it by a renamed `refresh_marked` →
+  `refresh_row_caches` (all five call sites — `sync_window`, `tick`, both
+  `run_command` branches, `select_by_query_command` — updated together, a
+  mechanical rename since rule hits depend on window contents the same way
+  marked-state does). `set_highlight_config(path)` (new, not called by
+  `App::new` — every existing test/caller that never calls it keeps
+  pre-P3.8 behaviour exactly) loads rules and refreshes the caches once;
+  `tick` polls `rules` every call (unconditionally, ahead of the query
+  debounce check) and refreshes the caches when `poll` reports a reload
+  happened. `row_tokens` now folds each hit rule's own `Decoration` into the
+  list passed to `highlight::resolve` alongside the marked-state one —
+  P3.7's "same path" claim now has a second real producer, not just marked
+  state and a hand-built test double. `highlight_errors()` exposes
+  `rules.errors()`; `ui::render` (`crates/bam-tui/src/ui.rs`) shows them
+  (joined by `"; "`) in the row-1 slot, at the lowest priority (query error
+  > command line > status > highlight errors).
+
+  `main.rs` gained `resolve_config_path(flags)` (extracted out of
+  `load_keymap`, which now takes the resolved path directly) so the `[keys]`
+  and `[[highlight]]` sections of the same `bam.toml` are resolved once, not
+  twice; `tui()` calls `app.set_highlight_config(&config_path)` right after
+  `App::new`, failing the same way the DB-open and initial-query steps
+  already do on a real error (a rule-level error never reaches this path —
+  only a genuine `StoreError`, e.g. a DB failure, does).
+
+  Ten tests: six in the new `crates/bam-tui/tests/tui_highlight.rs`, matching
+  the phase doc's six bullets exactly. The first four (default/explicit/
+  unregistered language, a bad `when` reported-and-skipped) drive a real
+  `Session`/`SessionStore` against a seeded one-row DB — genuine parser/
+  registry/compiler wiring is what's under test, not a fake's own hardcoded
+  logic, same reasoning as `tui_selection.rs`'s save/load round trip. The
+  last two (hot reload, debounce) use a `FakeStore` that echoes `when` back
+  as `FullText` and counts `parse_lang` calls, driven by synthetic `Instant`s
+  exactly like P3.5's own debounce tests — deterministic timing instead of
+  real filesystem-event races. The other four now-existing `FakeStore`s
+  (`tui_shell.rs`, `tui_query_line.rs`, `tui_selection.rs`, `tui_tokens.rs`)
+  each needed placeholder `parse_lang`/`matching_ids` impls to keep
+  compiling, same convention as every prior round's trait growth.
+
+107 tests total (6 new in `tui_highlight.rs` + 101 pre-existing; verified via
+`cargo test --workspace 2>&1 | grep "test result:"` and summed, per Round
+10/14's own caution about hand-counting). `cargo fmt --check`, `cargo clippy
+--workspace --all-targets -- -D warnings`, and the wasm32
+`--no-default-features` check all clean. Also
+smoke-tested the real `bam` binary: `ingest --offline` still reports 501
+packages, and `bam tui --config <a file with one [[highlight]] rule>`
+against the same scratch DB still hits the clean `enable_raw_mode` failure
+path with no TTY attached — proving `set_highlight_config` runs without
+erroring against a real config file, not just the test doubles; the real
+interactive hot-reload loop is **not** verified against a real terminal this
+round, same standing caveat as every prior TUI round.
+
+**Deviations for the next session to know about:**
+- No `default_query_language` key was added to `bam.toml`. The phase doc's
+  own sample comment (`# optional; falls back to default_query_language`)
+  reads as a config key, but with exactly one language registered, the
+  `LanguageRegistry`'s own constructor-supplied default id (`"bam-dsl"`,
+  set once in `Session::from_connection`) already satisfies "the configured
+  default" — a `bam.toml` key that lets a user choose *among* registered
+  languages is speculative until a second one exists, same YAGNI call
+  Round 15's deviation note made about wiring the registry at all. Revisit
+  together with that note once a second language is registered.
+- "A rule whose `when` fails to compile" is read broadly: both a parse-time
+  rejection (`FieldRegistry`'s type checks, e.g. `size:~'foo'`) and a
+  predicate that parses but fails the separate IR→SQL compile step (only
+  reachable today via `Similar`, not yet supported) are caught at rule-load
+  time and treated the same way — recorded in `errors()`, rule dropped. This
+  is why `reload` calls `store.matching_ids(&pred, &[])` as a trial after a
+  successful parse, not just `parse_lang` alone.
+- `HighlightRules` polls file *content* (a full read-and-compare each tick),
+  not `mtime` — a deliberate simplification over the more obvious
+  mtime-based watch, made specifically so the debounce test doesn't depend
+  on filesystem timestamp granularity. Fine at `bam.toml`'s size; revisit if
+  a much larger watched file ever makes a full read-per-tick measurably
+  costly.
+
+**Phase 3 remaining:** P3.9 (help overlay).
+
+---
+
 ## Next task
 
-**P3.8** — Highlight rules with hot reload: parse `[[highlight]]` blocks from
-`bam.toml`, compile each `when` through the query language named by its
-`lang` key (invariant I3), evaluate against visible rows, and feed the
-resulting `Decoration`s into P3.7's `highlight::resolve`. Watch the file and
-reload on change, debounced. Six tests against
-[phase-3-tui.md](docs/plan/phase-3-tui.md).
+**P3.9** — Help overlay: `?` opens an overlay listing the active bindings,
+rendered from the same table P3.3 loads (`default_keymap` merged with any
+user override), so the overlay and the real keymap cannot drift apart.
+`Esc`/`q` closes it. Three tests against
+[phase-3-tui.md](docs/plan/phase-3-tui.md). `ActionKind::OpenHelp` /
+`Action::OpenHelp` already exist (Round 13) with no consumer yet — this task
+is that consumer. **Phase 3 exit** follows this task.
 
 ---
 

@@ -25,11 +25,26 @@ pub struct SearchPackagesResponse {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct ParseQueryRequest {
     pub src: String,
+    /// Selects the query language by id (P3.8, invariant I3); `None` falls
+    /// back to the registry default (`bam-dsl`, the only one registered).
+    #[serde(default)]
+    pub lang: Option<String>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct ParseQueryResponse {
     pub predicate: Predicate,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct FilterIdsRequest {
+    pub predicate: Predicate,
+    pub ids: Vec<i64>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct FilterIdsResponse {
+    pub ids: Vec<i64>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]

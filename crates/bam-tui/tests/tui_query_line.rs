@@ -67,6 +67,17 @@ impl PackageStore for FakeStore {
         BamDsl.parse(src, &reg)
     }
 
+    // P3.8 grew the trait with highlight-rule operations (see
+    // tui_highlight.rs); unused placeholders here since these tests predate
+    // highlight rules and never wire a config in.
+    fn parse_lang(&self, _lang: Option<&str>, src: &str) -> Result<Predicate, StoreError> {
+        let reg = FieldRegistry::new(package_fields());
+        BamDsl.parse(src, &reg).map_err(|e| StoreError(e.message))
+    }
+    fn matching_ids(&self, _pred: &Predicate, _ids: &[i64]) -> Result<Vec<i64>, StoreError> {
+        Ok(Vec::new())
+    }
+
     // P3.6 grew the trait with selection operations (see tui_selection.rs);
     // unused placeholders here since P3.5's tests predate selections.
     fn toggle(&self, _package_id: i64) -> Result<bool, StoreError> {

@@ -29,7 +29,7 @@ use crate::http::HttpClient;
 use crate::progress::{OperationId, Outcome, ProgressEvent, ProgressSink};
 use crate::query::bam_dsl::BamDsl;
 use crate::query::ir::{Predicate, SelectionRef};
-use crate::query::lang::{ParseError, QueryLanguage};
+use crate::query::lang::{LanguageError, LanguageRegistry, ParseError};
 use crate::query::registry::{FieldRegistry, package_fields};
 
 #[derive(Debug, Error)]
@@ -42,6 +42,8 @@ pub enum SessionError {
     Ingest(#[from] IngestError),
     #[error(transparent)]
     Parse(#[from] ParseError),
+    #[error(transparent)]
+    Language(#[from] LanguageError),
     #[error("no selection named '{0}'")]
     UnknownSelection(String),
 }
@@ -69,6 +71,7 @@ pub enum SelectionMode {
 pub struct Session {
     conn: Connection,
     registry: FieldRegistry,
+    langs: LanguageRegistry,
     working_selection_id: i64,
     operations: Mutex<HashMap<OperationId, OperationStatus>>,
     next_operation: AtomicU64,
@@ -93,9 +96,12 @@ impl Session {
                 ephemeral: true,
             },
         )?;
+        let mut langs = LanguageRegistry::new("bam-dsl");
+        langs.register(Box::new(BamDsl));
         Ok(Self {
             conn,
             registry: FieldRegistry::new(package_fields()),
+            langs,
             working_selection_id,
             operations: Mutex::new(HashMap::new()),
             next_operation: AtomicU64::new(1),
@@ -105,11 +111,22 @@ impl Session {
     // ---- search / get / categories ----
 
     /// Parses query-line text through `bam-dsl` (P2.4) against this
-    /// session's field registry. `bam-dsl` is the only registered surface
-    /// syntax so far — a `LanguageRegistry` (P2.2) for a single entry would
-    /// be speculative; wire one in when a second language needs selecting.
+    /// session's field registry, through the registry's default language
+    /// (`bam-dsl` — the only one registered so far).
     pub fn parse_query(&self, src: &str) -> Result<Predicate, SessionError> {
-        Ok(BamDsl.parse(src, &self.registry)?)
+        self.parse_query_lang(None, src)
+    }
+
+    /// As [`Self::parse_query`], but selects the language by id (`None` =
+    /// the registry default) — P3.8's highlight rules each name their own
+    /// `lang`, invariant I3.
+    pub fn parse_query_lang(
+        &self,
+        lang: Option<&str>,
+        src: &str,
+    ) -> Result<Predicate, SessionError> {
+        let language = self.langs.get(lang)?;
+        Ok(language.parse(src, &self.registry)?)
     }
 
     pub fn search_packages(&self, pred: &Predicate) -> Result<Vec<Package>, SessionError> {
@@ -179,6 +196,34 @@ impl Session {
             .query_map(params_from_iter(compiled.params.iter()), |r| r.get(0))?
             .collect::<Result<_, _>>()?;
         Ok(ids)
+    }
+
+    /// Matches `pred` restricted to `ids` (P3.8): the highlight engine only
+    /// needs to know which of the *currently visible* rows a rule hits, not
+    /// the whole table. `compiled_for` runs regardless of whether `ids` is
+    /// empty, so calling with `ids: &[]` doubles as a load-time validation
+    /// trial — a rule whose predicate is well-typed but fails to compile
+    /// (e.g. `Similar`, not yet supported) is caught here without a real row.
+    pub fn matching_ids_among(
+        &self,
+        pred: &Predicate,
+        ids: &[i64],
+    ) -> Result<Vec<i64>, SessionError> {
+        let compiled = self.compiled_for(pred)?;
+        if ids.is_empty() {
+            return Ok(Vec::new());
+        }
+        let placeholders = vec!["?"; ids.len()].join(",");
+        let mut params = compiled.params.clone();
+        params.extend(ids.iter().map(|id| SqlValue::Integer(*id)));
+        let mut stmt = self.conn.prepare(&format!(
+            "SELECT id FROM ({}) WHERE id IN ({placeholders})",
+            compiled.sql
+        ))?;
+        let matched = stmt
+            .query_map(params_from_iter(params.iter()), |r| r.get(0))?
+            .collect::<Result<_, _>>()?;
+        Ok(matched)
     }
 
     fn compiled_for(&self, pred: &Predicate) -> Result<compile::CompiledQuery, SessionError> {
