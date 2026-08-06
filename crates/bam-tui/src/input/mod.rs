@@ -267,4 +267,121 @@ mod tests {
             Resolution::Resolved(Action::MoveDown(1))
         );
     }
+
+    // P3.2 — resolver state machine, against the five test groups in
+    // docs/plan/phase-3-tui.md. P3.1 already implemented `Resolver` in full;
+    // these are the additional cases its own four tests didn't cover.
+
+    fn motion_keymap() -> Keymap {
+        Keymap(HashMap::from([
+            ("j".to_string(), ActionKind::MoveDown),
+            ("gg".to_string(), ActionKind::GoTop),
+            ("G".to_string(), ActionKind::GoToRowOrBottom),
+            ("esc".to_string(), ActionKind::LeaveMode),
+        ]))
+    }
+
+    fn mode_keymap() -> Keymap {
+        Keymap(HashMap::from([
+            ("v".to_string(), ActionKind::EnterVisual),
+            ("esc".to_string(), ActionKind::LeaveMode),
+            (":".to_string(), ActionKind::EnterCommand),
+            ("/".to_string(), ActionKind::EnterSearch),
+        ]))
+    }
+
+    #[test]
+    fn count_prefix_motions_resolve() {
+        let mut resolver = Resolver::new(motion_keymap());
+        assert_eq!(
+            resolver.handle_key(Key::Char('j')),
+            Resolution::Resolved(Action::MoveDown(1))
+        );
+        assert_eq!(resolver.handle_key(Key::Char('5')), Resolution::Pending);
+        assert_eq!(
+            resolver.handle_key(Key::Char('j')),
+            Resolution::Resolved(Action::MoveDown(5))
+        );
+        assert_eq!(resolver.handle_key(Key::Char('1')), Resolution::Pending);
+        assert_eq!(resolver.handle_key(Key::Char('2')), Resolution::Pending);
+        assert_eq!(
+            resolver.handle_key(Key::Char('G')),
+            Resolution::Resolved(Action::GoToRow(12))
+        );
+    }
+
+    #[test]
+    fn g_prefix_state_machine() {
+        let mut resolver = Resolver::new(motion_keymap());
+        assert_eq!(resolver.handle_key(Key::Char('g')), Resolution::Pending);
+        assert_eq!(
+            resolver.handle_key(Key::Char('g')),
+            Resolution::Resolved(Action::GoTop)
+        );
+        assert_eq!(resolver.handle_key(Key::Char('g')), Resolution::Pending);
+        assert_eq!(
+            resolver.handle_key(Key::Char('x')),
+            Resolution::Rejected(Reason("gx".to_string()))
+        );
+    }
+
+    #[test]
+    fn esc_clears_pending_state_from_any_partial_sequence() {
+        let mut resolver = Resolver::new(motion_keymap());
+
+        // partial count
+        assert_eq!(resolver.handle_key(Key::Char('5')), Resolution::Pending);
+        assert_eq!(
+            resolver.handle_key(Key::Esc),
+            Resolution::Resolved(Action::LeaveMode)
+        );
+        assert_eq!(
+            resolver.handle_key(Key::Char('j')),
+            Resolution::Resolved(Action::MoveDown(1)),
+            "the count from before Esc must not survive"
+        );
+
+        // partial key-sequence prefix
+        assert_eq!(resolver.handle_key(Key::Char('g')), Resolution::Pending);
+        resolver.handle_key(Key::Esc); // "gesc" is unbound -> Rejected, but clears either way
+        assert_eq!(
+            resolver.handle_key(Key::Char('j')),
+            Resolution::Resolved(Action::MoveDown(1)),
+            "the g prefix from before Esc must not survive"
+        );
+    }
+
+    #[test]
+    fn mode_transitions() {
+        let mut resolver = Resolver::new(mode_keymap());
+        assert_eq!(
+            resolver.handle_key(Key::Char('v')),
+            Resolution::Resolved(Action::EnterMode(Mode::Visual))
+        );
+        assert_eq!(
+            resolver.handle_key(Key::Esc),
+            Resolution::Resolved(Action::LeaveMode)
+        );
+        assert_eq!(
+            resolver.handle_key(Key::Char(':')),
+            Resolution::Resolved(Action::EnterMode(Mode::Command))
+        );
+        assert_eq!(
+            resolver.handle_key(Key::Char('/')),
+            Resolution::Resolved(Action::EnterMode(Mode::Insert))
+        );
+    }
+
+    #[test]
+    fn count_with_no_following_key_remains_pending_indefinitely() {
+        let mut resolver = Resolver::new(motion_keymap());
+        assert_eq!(resolver.handle_key(Key::Char('1')), Resolution::Pending);
+        assert_eq!(resolver.handle_key(Key::Char('2')), Resolution::Pending);
+        assert_eq!(resolver.handle_key(Key::Char('3')), Resolution::Pending);
+        assert_eq!(
+            resolver.handle_key(Key::Char('j')),
+            Resolution::Resolved(Action::MoveDown(123)),
+            "the accumulated count survives arbitrarily many pending digits"
+        );
+    }
 }

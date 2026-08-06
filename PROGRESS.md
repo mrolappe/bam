@@ -692,13 +692,53 @@ clean.
 
 ---
 
+## Round 12 — 2026-08-06 · Input resolver state machine (P3.2)
+
+**Done:**
+
+- **P3.2** — Read `Resolver::handle_key` (`crates/bam-tui/src/input/mod.rs`,
+  built in Round 11) against the five test groups in `phase-3-tui.md` before
+  writing anything: pending-count accumulation, prefix-sequence matching, and
+  clear-on-reject were all already implemented as part of P3.1's own
+  deliverable — P3.1 went further than its task text asked (which only
+  required the *types*) and built the working state machine too. So P3.2's
+  "implement the resolver" has no code left to do; its actual remaining scope
+  is the five test groups themselves, which P3.1's four narrower tests didn't
+  fully cover. Added five tests to the existing `#[cfg(test)]` module (no new
+  test file, matching P3.1's own inline-test framing): `count_prefix_motions_
+  resolve` (adds the `12G` → `GoToRow(12)` case P3.1 didn't test), `g_prefix_
+  state_machine` (adds the `gg` → `GoTop` middle case — P3.1's own tests
+  covered the `Pending` and `Rejected` ends of that sequence but never the
+  resolved middle), `esc_clears_pending_state_from_any_partial_sequence`
+  (both a pending count and a pending key-prefix, proving neither survives
+  into the next resolution), `mode_transitions` (`v`/`Esc`/`:`/`/` against a
+  keymap binding all four, none of which P3.1's `test_keymap()` included),
+  and `count_with_no_following_key_remains_pending_indefinitely` (three
+  digits in a row, still `Pending`, then resolves with the full accumulated
+  count). No production code changed — confirmed by running the new tests
+  against the unmodified `Resolver` before writing this note, not assumed.
+
+78 tests total (5 new + 73 pre-existing). `cargo fmt --check`, `cargo clippy
+--workspace --all-targets -- -D warnings`, and the wasm32
+`--no-default-features` check (unaffected — `bam-tui` isn't part of it) all
+clean.
+
+**Deviation for the next session to know about:** P3.2's task text frames
+this round as an implementation task ("Implement the resolver from P3.1"),
+but by the time this round started there was nothing left to implement —
+Round 11 had already built it in full while delivering P3.1's own narrower
+scope. Flagged per the same convention as Round 8/10's P2.8 note: read the
+current state before assuming a task's text still matches what's left to do.
+
+---
+
 ## Next task
 
-**P3.2** — input resolver state machine: pending state, count accumulation,
-mode transitions, timeout-free, against the five test groups in
-[phase-3-tui.md](docs/plan/phase-3-tui.md) (full binding coverage — `H`/`M`/
-`L`, `ctrl-d/u/f/b`, mode transitions on `v`/`Esc`/`:`/`/` — beyond P3.1's
-four narrower cases).
+**P3.3** — default keymap + user override merge: one table of default
+bindings (`j` `k` `gg` `G` `0` `$` `ctrl-d` `ctrl-u` `ctrl-f` `ctrl-b` `H` `M`
+`L` `n` `N` `/` `?` `:` `space` `v` `Esc` `q`, with counts) merged with
+`bam.toml` overrides, against the five test groups in
+[phase-3-tui.md](docs/plan/phase-3-tui.md).
 
 ---
 
