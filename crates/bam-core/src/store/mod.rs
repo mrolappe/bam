@@ -2,6 +2,7 @@ use std::path::Path;
 
 use rusqlite::Connection;
 
+pub mod compile;
 pub mod fetch;
 pub mod ingest;
 pub mod land;

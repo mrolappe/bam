@@ -85,6 +85,14 @@ impl FieldRegistry {
             Err(RegistryError::MatchNotPermitted(field.name.to_string()))
         }
     }
+
+    /// Every name and alias, for building "did you mean" suggestions on an
+    /// unknown-field error (`bam-dsl`, P2.4). Not used by resolution itself.
+    pub fn field_names(&self) -> impl Iterator<Item = &str> {
+        self.fields
+            .iter()
+            .flat_map(|f| std::iter::once(f.name).chain(f.aliases.iter().copied()))
+    }
 }
 
 /// The initial field set, mapped to P1.2's `package` table. `type` and

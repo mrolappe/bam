@@ -427,14 +427,116 @@ clippy --workspace --all-targets -- -D warnings`, and the wasm32
 
 ---
 
+## Round 8 — 2026-08-06 · `bam-dsl` grammar + parser + IR → SQL compiler (P2.3–P2.5)
+
+**Done:**
+
+- **P2.3** — `docs/lang-bam-dsl.md`: grammar, precedence table, fifteen
+  worked examples with IR trees, and a malformed-input table with expected
+  byte spans. Two design points not fully pinned down by the phase doc's
+  grammar sketch, resolved and written down rather than guessed at
+  implementation time: (1) `field:rhs` is one context-sensitive operator —
+  `Match`/`Glob` if `rhs` contains `*`, else `Compare`/`Eq` — matching
+  `docs/query-ir.md`'s own worked examples (`name:Deluxe*` vs `version:1.2`)
+  where the phase doc's sketch reads as two separate forms; (2) the
+  force-match operator is the two-character `:~` (`size:~'foo'`,
+  matching `bam-handoff.md` §11.1's `author:~'Mustermann'` and the field
+  registry's own error text), not a bare `~` — an early draft used bare `~`
+  and was corrected before any code was written against it. Also documented:
+  adjacent bareword terms merge into one `FullText` node spanning their
+  combined source text (`docs/query-ir.md`'s own example 7,
+  `tracker module editor` → one `FullText`, not three ANDed ones) — juxtaposition-as-AND
+  has this one exception.
+- **P2.4** — `crates/bam-core/src/query/bam_dsl.rs`, a hand-rolled recursive-
+  descent parser (`nom` skipped per the phase doc's own note) implementing
+  `QueryLanguage` as `BamDsl`. Byte spans on every `ParseError`.
+  `FieldRegistry::field_names()` (registry.rs) is a small new accessor —
+  every name and alias, for a Levenshtein-distance "nearest field" suggestion
+  on `UnknownField`, not exposed before this task. `render` re-serializes to
+  canonical `bam-dsl` text (`Eq` compares always render via `:`, other ops via
+  their symbol; `Or`/`And` children are parenthesized under a same-or-higher-
+  precedence parent so re-parsing can't reflatten a nested tree into a flat
+  one) — its round-trip test asserts `parse(render(p)) == p` for each of the
+  fifteen built predicates directly, not `render(parse(s)) == s`: byte-
+  identical source reproduction isn't the invariant that matters for a UI
+  "show and correct the generated query" round-trip, semantic fidelity is.
+  Ten tests in `tests/query_bam_dsl.rs` (the phase doc's five groups; the
+  fifteen-examples and malformed-input groups are table-driven, one test
+  each, rather than fifteen-plus-six separate `#[test]` functions).
+- **P2.5** — `crates/bam-core/src/store/compile.rs` (native-gated, inside
+  `store::` per I1). `Predicate` → `SELECT id FROM package WHERE ...` plus a
+  `Vec<rusqlite::types::Value>`; every literal is `params.push`ed, never
+  formatted into the SQL string. `Predicate::InSelection` compiles directly
+  to an `EXISTS` subquery over `selection`/`selection_member` (P1.2's
+  schema) — see the deviation note below for why this, not
+  `FieldRegistry`/`SqlSource`, is where that logic lives. `year>N` detects
+  `field.name == "year"` and compiles a ±7-day window against
+  `date_precision` (`CAST(strftime('%Y', CASE WHEN date_precision='exact'
+  THEN uploaded_on ELSE date(uploaded_on, '±7 days') END) AS INTEGER)` at
+  each edge), so a `week`-precision row whose uncertainty window straddles a
+  year boundary is excluded rather than guessed into either side.
+  `FullText` compiles to `description LIKE ? ESCAPE '\'` with `%`/`_`/`\`
+  escaped — Aminet filenames routinely contain `_`, which is a `LIKE`
+  wildcard otherwise. `SqlSource::Join` is left as
+  `CompileError::UnsupportedJoinSource` — no current field uses it; see the
+  deviation note. Six tests in `tests/store_compile.rs`, against a nine-row
+  in-memory fixture DB built through P1.2's real insert functions (not
+  hand-written SQL): the fourteen executable worked examples (`Similar` is
+  compile-rejected by design, tested separately) against hand-computed
+  expected id sets, a `'; DROP TABLE package; --` literal proven bound and
+  the table proven intact, `GLOB` case-sensitivity, the year/`date_precision`
+  boundary, `!(a OR b)` vs. `!a OR b` giving different results, and
+  `Similar`'s rejection.
+
+58 tests total (11 new + 47 pre-existing; one pre-existing `#[ignore]`d
+real-mirror test not counted as newly run). `cargo fmt --check`, `cargo
+clippy --workspace --all-targets -- -D warnings`, and the wasm32
+`--no-default-features` check all clean.
+
+**Deviations for the next session to know about:**
+
+- `bam-handoff.md` §11's own example and `docs/query-ir.md`'s worked examples
+  3, 5, and 6 use `type:`/`author:`, neither of which is a registered field
+  (`docs/query-ir.md`, "Deliberately absent," Round 7). A query using them
+  can only ever produce `UnknownField`, so they cannot appear in P2.3's
+  fifteen *successfully-parsing* examples. Worked example 4 substitutes
+  `name` for `type` to preserve the example's real point (juxtaposition
+  binding tighter than `OR`); `type:mod` itself is kept, unchanged, in the
+  malformed-input table instead of silently vanishing. Flagged per the same
+  doc/reality-mismatch convention as Round 3's INDEX-header case and Round
+  4's missing size/version expected values.
+- P2.8's task text (`docs/plan/phase-2-query-core.md`) describes `in:`/
+  `marked` as "two entries in the field registry" resolving to an `EXISTS`
+  subquery — but P2.1 (Round 7) already made `InSelection` its own `Predicate`
+  variant, and P2.4's parser (this round) already parses `in:'x'`/`marked`
+  directly to it, not to a `Compare`/`Match` against a registered field.
+  P2.5 therefore compiles `InSelection` on its own, independent of
+  `FieldRegistry`. P2.8's own remaining scope, when its round comes, is
+  smaller than its task text implies (or may be redundant with what's
+  already built) — worth a short reconciliation pass rather than following
+  the task text literally, per that task's own instruction to report back
+  rather than force a fit.
+- `parse_size_bytes` (P1.6, `ingest/normalize.rs`) only recognizes uppercase
+  `K`/`M`, correct for real Aminet INDEX data. The DSL's own grammar sketch
+  calls for lowercase `k`/`M` in a *typed query value* (`size>100k`), which
+  is user input, not INDEX data — `bam_dsl.rs`'s `typed_value` upper-cases
+  before calling the shared function rather than forking a second size
+  parser for one case difference.
+
+---
+
 ## Next task
 
-Round 6 of the plan's own sizing table (`IMPLEMENTATION_PLAN.md`) is next:
-**P2.3–P2.5** — the `bam-dsl` grammar spec, its parser, and the IR → SQL
-compiler. See [phase-2-query-core.md](docs/plan/phase-2-query-core.md).
-P2.3 has no tests of its own; its fifteen worked examples become P2.4's test
-table verbatim, so P2.3 and P2.4 are not independently stoppable — plan to
-do both in the same round.
+**P2.6–P2.7** — the `bam-core::api` use-case layer (session-scoped, no
+global state, `CancellationToken`/`OperationId`/typed progress per invariant
+I5) and the selection store/operations (`mark`/`unmark`/`toggle`/`clear`/
+`select_by_query`/`save_as`/`load`/`list`/`delete`, invariant I7) that P2.5's
+`compile`'s `marked_selection_id` parameter and `InSelection` compilation
+were built to sit underneath. See
+[phase-2-query-core.md](docs/plan/phase-2-query-core.md). P2.8 (`in:`/
+`marked` as registry entries) comes after; per this round's deviation note,
+check what it actually still needs to add before implementing its task text
+literally.
 
 ---
 
