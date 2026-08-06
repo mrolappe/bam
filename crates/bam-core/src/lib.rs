@@ -1,3 +1,4 @@
+pub mod http;
 pub mod ingest;
 #[cfg(feature = "native")]
 pub mod store;

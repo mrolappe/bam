@@ -1,4 +1,4 @@
-use rusqlite::{Connection, Result, params};
+use rusqlite::{Connection, OptionalExtension, Result, params};
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct LandingIndexLine {
@@ -172,6 +172,26 @@ pub fn insert_selection_member(conn: &Connection, row: &SelectionMember) -> Resu
     conn.execute(
         "INSERT INTO selection_member (selection_id, package_id) VALUES (?1, ?2)",
         params![row.selection_id, row.package_id],
+    )?;
+    Ok(())
+}
+
+/// Per-URL ETag for conditional GET (P1.9). `None` when nothing has been
+/// fetched from `url` yet.
+pub fn get_etag(conn: &Connection, url: &str) -> Result<Option<String>> {
+    conn.query_row(
+        "SELECT etag FROM http_cache WHERE url = ?1",
+        params![url],
+        |row| row.get(0),
+    )
+    .optional()
+}
+
+pub fn set_etag(conn: &Connection, url: &str, etag: &str) -> Result<()> {
+    conn.execute(
+        "INSERT INTO http_cache (url, etag) VALUES (?1, ?2)
+         ON CONFLICT(url) DO UPDATE SET etag = excluded.etag",
+        params![url, etag],
     )?;
     Ok(())
 }

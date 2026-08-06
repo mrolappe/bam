@@ -5,10 +5,16 @@ struct Migration {
     sql: &'static str,
 }
 
-const MIGRATIONS: &[Migration] = &[Migration {
-    version: 1,
-    sql: include_str!("../../migrations/0001_initial.sql"),
-}];
+const MIGRATIONS: &[Migration] = &[
+    Migration {
+        version: 1,
+        sql: include_str!("../../migrations/0001_initial.sql"),
+    },
+    Migration {
+        version: 2,
+        sql: include_str!("../../migrations/0002_http_cache.sql"),
+    },
+];
 
 /// Runs every migration newer than the DB's `user_version`, in order, and
 /// advances `user_version` to match. No down-migrations: schema only moves

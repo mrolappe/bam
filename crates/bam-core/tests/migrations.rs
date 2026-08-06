@@ -47,14 +47,14 @@ fn applying_twice_is_a_noop() {
 #[test]
 fn db_at_version_n_only_runs_migrations_above_n() {
     let conn = Connection::open(":memory:").unwrap();
-    // Pretend the schema is already at the latest version, without ever
-    // running the DDL. If `apply_migrations` ignored `user_version` and
-    // re-ran migration 1 anyway, the (nonexistent) CREATE TABLE would still
-    // succeed trivially — so instead prove it by checking no tables exist
-    // after a call that should have been a no-op.
+    // Pretend migration 1 already ran, without ever running its DDL. If
+    // `apply_migrations` ignored `user_version` and re-ran migration 1
+    // anyway, its tables would appear alongside migration 2's — so instead
+    // prove migration 1 was skipped by checking only migration 2's table
+    // (`http_cache`) exists afterwards.
     conn.pragma_update(None, "user_version", 1).unwrap();
 
     store::apply_migrations(&conn).unwrap();
 
-    assert!(table_names(&conn).is_empty());
+    assert_eq!(table_names(&conn), vec!["http_cache".to_string()]);
 }

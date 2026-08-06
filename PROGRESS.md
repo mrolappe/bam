@@ -249,32 +249,93 @@ discusses invariant I1.
 
 ---
 
+## Round 5 — 2026-08-06 · RECENT upsert + HttpClient
+
+**Done:**
+
+- **P1.8** — `store::land::land_lines` factors out the split-body-into-lines
+  → `insert_landing_index_line` loop that both this task and P1.9 need,
+  shared rather than duplicated. `store::recent::upsert_recent` lands a
+  RECENT body through it, then upserts each normalized row into `package` by
+  `(dir, file)`: no existing row → insert; existing row whose derived fields
+  differ → `UPDATE ... WHERE id = ?` (preserves `id`, so FK-linked
+  `enrichment`/`selection_member` survive — the invariant P1.2's schema notes
+  named and Round 4 deliberately deferred to this task); existing row with
+  identical fields → left completely untouched, not even `landing_id` is
+  rewritten, so re-listing an unchanged package costs nothing and never
+  appears in the returned `Vec<ChangedPackage>`. Three tests in
+  `tests/store_recent.rs`. The real fixtures turned out to have zero
+  `(dir, file)` overlap (checked directly, 2026-08-06), so "existing rows
+  untouched" is proven by running the same `recent_sample.txt` body twice and
+  asserting the second run changes nothing; "changed-list matches exactly"
+  needed a synthetic case, built by taking one real INDEX line
+  (`A2KDeck.lha`) and swapping its size token — the parser is token-position
+  based, so this doesn't require preserving column alignment — to prove an
+  update is reported while an untouched duplicate of the same line, present
+  in the same body, is not.
+- **P1.9** — `http::HttpClient` (trait + `HttpRequest`/`HttpResponse`/
+  `HttpError`) lives in the new `src/http/` module, ungated so a fake
+  implementation needs neither the `native` feature nor a network to drive a
+  test. `HttpClient::get` is `async fn` directly in the trait (native RPITIT,
+  stable since 1.75) rather than `async-trait` — it's only ever called via
+  `impl HttpClient`, never `dyn`, so the lint asking for explicit `Send`
+  bounds is suppressed with a one-line `#[allow(async_fn_in_trait)]` rather
+  than restructuring around a bound nothing here needs.
+  `http::reqwest_client::ReqwestClient` (behind `native`) is the real
+  implementation; `USER_AGENT` is `bam/{version} (+github repo URL)` — the
+  handoff doc's §16 asks for a descriptive UA with contact info but doesn't
+  fix a format, and a URL was chosen over an email address as the more
+  conventional, less personally-identifying contact point for a bot UA.
+  Gunzip is `ingest::gzip::gunzip`, ungated like P1.5's charset decode: it's
+  `flate2` on its default `miniz_oxide` (pure-Rust) backend, confirmed
+  wasm32-safe by the same `--no-default-features` check the other ingest
+  modules pass. `store::fetch::fetch_and_land` is the one file that mixes
+  `HttpClient` with `rusqlite` (I1 confines the *string* `rusqlite` to
+  `store::`, not `reqwest` — the ETag lookup needs a `Connection`, so the
+  orchestration has to live there even though `ReqwestClient` itself doesn't).
+  It checks the stored ETag (new `http_cache(url, etag)` table, migration
+  `0002`), sends conditional GET, returns `FetchOutcome::NotModified` on 304
+  without touching landing at all, and only stores a new ETag and lands lines
+  on 200 — an error from the client (e.g. mapped-from-500) propagates before
+  any landing write, so a failed fetch can't leave a partial ingest. Five
+  tests in `tests/http.rs`, including a `#[ignore = "..."]`d real-mirror test
+  against `RECENT.gz`.
+
+All 33 tests pass (8 new — 3 in `store_recent.rs`, 5 in `http.rs` with 1 of
+those correctly `#[ignore]`d — plus 25 pre-existing). `cargo fmt --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`, and the wasm32
+`--no-default-features` check all clean.
+
+**Deviation for the next session to know about:** adding migration `0002`
+broke P1.3's `db_at_version_n_only_runs_migrations_above_n` test, which had
+proved "migrations above N still run" by asserting *no* tables exist after
+stamping `user_version = 1` on a table-less DB — that assertion was only ever
+true because migration 1 was the *only* migration. Updated it to assert
+exactly `http_cache` (migration 2's table) exists, which now proves both
+halves of the invariant: migration 1 was skipped, migration 2 ran. Watch for
+this same false-vacuous-pass pattern if a third migration lands.
+
+---
+
 ## Next task
 
-**Round 5 — P1.8–P1.9** (Sonnet tier both).
-See [phase-1-ingest.md](docs/plan/phase-1-ingest.md) for the full task
-entries.
+**Round 6 — P1.10** (Sonnet tier). See
+[phase-1-ingest.md](docs/plan/phase-1-ingest.md) for the full task entry.
 
-1. **P1.8** — RECENT-based incremental update. Reuses P1.4's parser and
-   P1.6's pure derivation functions wholesale; the new work is an
-   upsert-by-`(dir, file)` (preserving existing `package.id` so FK-linked
-   `enrichment`/`selection_member` survive — this is where that invariant
-   from P1.2's schema notes actually gets satisfied, deliberately deferred
-   past Round 4) and a changed-package report. Hand over: "same line format
-   as INDEX, reuse the parser", the `(dir, file)` key, the id-stability
-   requirement, `recent_sample.txt`.
-2. **P1.9** — `HttpClient` trait + `reqwest` implementation behind `native`
-   (invariant I1: `bam-core` must not call `reqwest` directly). Fetch
-   `INDEX.gz`/`RECENT.gz`, gunzip, conditional GET via stored `ETag`. Hand
-   over: the trait signature, the two URLs, the `User-Agent` format, "store
-   ETag per URL", the fake-client test requirement, the `#[ignore]`d
-   real-mirror test (never run in CI).
+Wire P1.9 → P1.2 → P1.6 behind one `bam ingest` CLI subcommand, with
+`--offline` (fixtures only) and `--rebuild-normalized` (skip fetch,
+re-derive from landing). This is where invariant **I5** first bites: progress
+is a typed, serializable `ProgressEvent` enum emitted through a
+`ProgressSink` trait, not a preformatted string — the CLI implements the sink
+and renders a progress bar, the core formats nothing. Hand over: invariant
+I5, the `ProgressEvent` shape (`Started`/`Advanced`/`Finished`, each carrying
+an `OperationId`), the three flags, the five tests (recording-sink event
+sequence, `ProgressEvent` round-trips through serde, `--offline` populates a
+DB from fixtures, `--rebuild-normalized` works with a fake client configured
+to panic on any call — proving no network is touched, P0.4's purity test
+still passes with no `println!` reaching into the core).
 
-**Round 5 ends when** P1.8's three tests pass (RECENT adds only new rows,
-existing rows and their ids untouched, changed-list matches exactly) and
-P1.9's five tests pass (fake-client full ingest with no network, ETag sent on
-second request, 304 inserts nothing and isn't an error, 500 surfaces as
-`HttpError` not a partial ingest, real-mirror test is `#[ignore]`d).
+**Round 6 ends when** all five tests pass.
 
 ---
 
