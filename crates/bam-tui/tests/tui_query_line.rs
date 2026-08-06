@@ -66,6 +66,34 @@ impl PackageStore for FakeStore {
         let reg = FieldRegistry::new(package_fields());
         BamDsl.parse(src, &reg)
     }
+
+    // P3.6 grew the trait with selection operations (see tui_selection.rs);
+    // unused placeholders here since P3.5's tests predate selections.
+    fn toggle(&self, _package_id: i64) -> Result<bool, StoreError> {
+        unimplemented!()
+    }
+    fn is_marked(&self, _package_id: i64) -> Result<bool, StoreError> {
+        Ok(false)
+    }
+    fn mark(&self, _package_id: i64) -> Result<(), StoreError> {
+        unimplemented!()
+    }
+    fn select_by_query(
+        &self,
+        _pred: &Predicate,
+        _mode: bam_core::api::SelectionMode,
+    ) -> Result<usize, StoreError> {
+        unimplemented!()
+    }
+    fn save_as(&self, _name: &str) -> Result<(), StoreError> {
+        unimplemented!()
+    }
+    fn load(&self, _name: &str) -> Result<(), StoreError> {
+        unimplemented!()
+    }
+    fn list_selections(&self) -> Result<Vec<bam_core::api::SelectionSummary>, StoreError> {
+        unimplemented!()
+    }
 }
 
 fn new_app() -> (App<FakeStore>, Rc<RefCell<usize>>) {

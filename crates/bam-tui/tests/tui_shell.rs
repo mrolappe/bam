@@ -56,6 +56,36 @@ impl PackageStore for FakeStore {
     fn parse(&self, src: &str) -> Result<Predicate, ParseError> {
         Ok(Predicate::FullText(src.to_string()))
     }
+
+    // P3.6 grew the trait with selection operations (see tui_selection.rs);
+    // unused placeholders here, same as `parse` above. `is_marked` must
+    // still return `Ok` rather than panic — `App::new` calls it for every
+    // loaded row regardless of which test is running.
+    fn toggle(&self, _package_id: i64) -> Result<bool, StoreError> {
+        unimplemented!()
+    }
+    fn is_marked(&self, _package_id: i64) -> Result<bool, StoreError> {
+        Ok(false)
+    }
+    fn mark(&self, _package_id: i64) -> Result<(), StoreError> {
+        unimplemented!()
+    }
+    fn select_by_query(
+        &self,
+        _pred: &Predicate,
+        _mode: bam_core::api::SelectionMode,
+    ) -> Result<usize, StoreError> {
+        unimplemented!()
+    }
+    fn save_as(&self, _name: &str) -> Result<(), StoreError> {
+        unimplemented!()
+    }
+    fn load(&self, _name: &str) -> Result<(), StoreError> {
+        unimplemented!()
+    }
+    fn list_selections(&self) -> Result<Vec<bam_core::api::SelectionSummary>, StoreError> {
+        unimplemented!()
+    }
 }
 
 #[test]

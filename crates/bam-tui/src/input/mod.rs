@@ -23,6 +23,7 @@ pub enum Key {
     Ctrl(char),
     Esc,
     Backspace,
+    Enter,
 }
 
 impl Key {
@@ -35,6 +36,7 @@ impl Key {
             Key::Ctrl(c) => format!("ctrl-{c}"),
             Key::Esc => "esc".to_string(),
             Key::Backspace => "backspace".to_string(),
+            Key::Enter => "enter".to_string(),
         }
     }
 }

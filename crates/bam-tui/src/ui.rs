@@ -34,15 +34,25 @@ pub fn render(app: &App<impl PackageStore>, frame: &mut Frame) {
         let col = err.span.map_or(0, |(start, _)| start.min(last));
         let marker = format!("{}^ {}", " ".repeat(QUERY_PREFIX.len() + col), err.message);
         frame.render_widget(Paragraph::new(marker), rows[1]);
+    } else if !app.command_text().is_empty() {
+        frame.render_widget(Paragraph::new(format!(":{}", app.command_text())), rows[1]);
+    } else if let Some(status) = app.status() {
+        frame.render_widget(Paragraph::new(status.to_string()), rows[1]);
     }
 
     let start = app.window_start();
+    let marked = app.visible_marked();
     let items: Vec<ListItem> = app
         .visible()
         .iter()
         .enumerate()
         .map(|(i, p)| {
-            let label = format!("{}/{}", p.dir, p.file);
+            let marker = if marked.get(i).copied().unwrap_or(false) {
+                "* "
+            } else {
+                ""
+            };
+            let label = format!("{marker}{}/{}", p.dir, p.file);
             if start + i == app.cursor() {
                 ListItem::new(label).style(Style::default().add_modifier(Modifier::REVERSED))
             } else {

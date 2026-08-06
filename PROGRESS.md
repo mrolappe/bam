@@ -962,12 +962,113 @@ real terminal this round, same standing caveat as every prior TUI round.
 
 ---
 
+## Round 16 — 2026-08-06 · Selection UI and `:` command line (P3.6)
+
+**Done:**
+
+- **P3.6** — `crates/bam-tui/src/store.rs`'s `PackageStore` trait grew seven
+  methods (`toggle`/`is_marked`/`mark`/`select_by_query`/`save_as`/`load`/
+  `list_selections`), each a thin `SessionStore` pass-through to P2.7's
+  `bam_core::api` functions — "everything routes through the API" per the
+  phase doc, same convention P3.4/P3.5 already established for `window`/
+  `parse`. Two of those API functions had gaps found while wiring this up:
+  `api::is_marked` didn't exist yet (added to `api/selection.rs`, same
+  bare-`package_id` shape as `mark`/`unmark`/`toggle`), and `api::list` —
+  built in Round 9 — was never re-exported from `api::mod`'s `pub use
+  selection::{...}` list, a pre-existing miss with no prior caller to trip
+  it; fixed by adding it to the same re-export line.
+
+  `App` (`crates/bam-tui/src/app.rs`) gained a `marked: Vec<bool>` field
+  parallel to `window.packages` — a *rendering cache* refreshed from
+  `store.is_marked` after every window change (`new`, `tick`, `sync_window`),
+  never an independent record of membership; the working selection in
+  `store::session` stays the sole source of truth, the same relationship
+  `window: WindowResult` already has to the real result set (P3.4). Added
+  `visual_anchor: Option<usize>` (`enter_visual`/`leave_visual`), and
+  `toggle_mark()`, which toggles the single row under the cursor normally
+  but — when an anchor is set — marks every row in `[anchor, cursor]` via
+  `mark_range` (a fresh `store.window(pred, start, len)` fetch of exactly
+  that span, not the currently-loaded viewport, so a Visual selection wider
+  than the viewport still marks correctly) and consumes the anchor.
+  `command_text`/`status` are the `:`-line's own editing/output state
+  (same class as `query_text`/`debounce_deadline`, not selection state), and
+  `run_command(&str) -> Result<CommandOutcome, StoreError>` parses the five
+  commands (`mark`/`unmark` reuse `store.parse` + `select_by_query` with
+  `SelectionMode::Union`/`Subtract`; `save`/`load` unquote an optionally
+  `"quoted name"`; `selections` returns the summaries) — `CommandOutcome`
+  is a small enum so a test can assert on the result directly rather than a
+  formatted string.
+
+  `bam-tui/src/input/mod.rs` gained `Key::Enter` — necessary once a command
+  line needs an explicit submit key, same class of small addition as
+  Round 13's `OpenHelp` and Round 15's `Backspace`. `main.rs`: `apply_action`
+  now takes `&mut Mode` and handles `ToggleMark`/`EnterMode(Visual|Command|
+  Insert)`/`LeaveMode` (previously resolved but silently ignored beyond
+  `Insert`, per Round 14's own note); a new `edit_command_line` mirrors
+  `edit_query_line` for `Mode::Command` (`Enter` runs the command and
+  surfaces `CommandOutcome`/error via `app.set_status`, `Esc` cancels).
+  `ui::render` shows a `"* "` marker before a marked row's label (only when
+  marked, so an all-unmarked buffer renders byte-identical to before this
+  round — confirmed by Round 14/15's pre-existing snapshot tests staying
+  green unmodified) and, in the row under the query line, the in-progress
+  command text or the last status message when there's no query error.
+
+  Four tests in the new `crates/bam-tui/tests/tui_selection.rs`, matching
+  the phase doc's four bullets exactly: a `FakeStore` backed by a shared
+  `HashSet<i64>` proves `space` toggles membership and the rendered buffer
+  gains a `*`; entering Visual, moving down 3, then confirming proves
+  exactly 4 rows (not 3, not 5) get marked; `run_command("mark dir:mus/*")`
+  against a fake that only recognizes that one predicate string proves the
+  `:mark` union; and a real file-backed `Session`/`SessionStore` (temp-path
+  pattern from Round 9's `api_selection.rs`) proves `:save "tracker
+  candidates"` then a *fresh* `Session::open` on the same path plus
+  `:load "tracker candidates"` restores the marked state. The fifth bullet
+  ("no selection state in the TUI") is a diff-review claim, not a test:
+  `App`'s new fields are either rendering caches refreshed from the store
+  (`marked`) or UI editing/output state (`visual_anchor`, `command_text`,
+  `status`) — none of them is itself the record of what's selected; that
+  stays in `store::session`'s `selection`/`selection_member` tables,
+  reached only through `PackageStore`. Round 14/15's two pre-existing
+  `FakeStore`s (`tui_shell.rs`, `tui_query_line.rs`) needed placeholder
+  impls of the seven new trait methods to keep compiling — `is_marked`
+  specifically returns `Ok(false)` rather than `unimplemented!()`, since
+  `App::new` now calls it for every loaded row regardless of which test is
+  running.
+
+96 tests total (4 new + 92 pre-existing — the wasm32 check is unaffected by
+either fix in `api/`, since the whole `api` module is `#[cfg(feature =
+"native")]`-gated at the crate root, never compiled into that build).
+`cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D
+warnings`, and the wasm32 `--no-default-features` check all clean. Also
+smoke-tested the real `bam` binary: `ingest --offline` still reports 501
+packages, and `bam tui` against the same scratch DB still hits the clean
+`enable_raw_mode` failure path with no TTY attached — the real interactive
+Visual-mode/command-line loop is **not** verified against a real terminal
+this round, same standing caveat as every prior TUI round.
+
+**Deviations for the next session to know about:**
+- `api::is_marked` and the `api::list` re-export fix are both P3.6-driven
+  additions/fixes to `bam-core::api`, not named by the phase doc's P3.6 text
+  (which only asks for the TUI-side wiring) — flagged in case a later round
+  assumes `api::mod`'s re-export list was already complete.
+- `App::marked`'s "rendering cache, not selection state" framing is this
+  round's own resolution of the diff-review bullet — worth a second look if
+  a future round finds it awkward that marked-state can go briefly stale
+  between a `mark`/`unmark` elsewhere (e.g. a future GUI client sharing the
+  same DB) and this session's next window refresh; P2.6's session-scoped
+  model (I5) already accepts that two sessions don't observe each other
+  live, so this is consistent with existing behavior, not a new gap.
+
+---
+
 ## Next task
 
-**P3.6** — Selection UI and `:` command line: `space` toggles the row under
-the cursor through P2.7's API, Visual mode marks a range, and `:mark
-<query>`/`:unmark <query>`/`:save <name>`/`:load <name>`/`:selections` —
-against the four tests plus a diff-review check in
+**P3.7** — Semantic token → ratatui style: the core emits semantic tokens
+(`gutter: "user"`, `background: "accent-subtle"`, `badge: "XL"`); one mapping
+table turns them into `Style` values and gutter characters, with marked
+state (I7) flowing through the same token path rather than a special case.
+Conflict rules: background is exclusive (highest `priority` wins), gutters
+and badges stack capped at 3. Five tests against
 [phase-3-tui.md](docs/plan/phase-3-tui.md).
 
 ---

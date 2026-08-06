@@ -19,6 +19,10 @@ pub fn unmark(session: &Session, package_id: i64) -> Result<(), Error> {
     session.unmark(package_id)
 }
 
+pub fn is_marked(session: &Session, package_id: i64) -> Result<bool, Error> {
+    session.is_marked(package_id)
+}
+
 /// Returns the resulting membership state (`true` = now marked).
 pub fn toggle(session: &Session, package_id: i64) -> Result<bool, Error> {
     session.toggle(package_id)

@@ -2,7 +2,7 @@
 //! something narrower than [`bam_core::api::Session`] and tests can inject a
 //! fake that counts calls without a database.
 
-use bam_core::api::{self, Session};
+use bam_core::api::{self, SelectionMode, SelectionSummary, Session};
 use bam_core::query::ir::Predicate;
 use bam_core::query::lang::ParseError;
 use bam_core::store::tables::Package;
@@ -39,6 +39,17 @@ pub trait PackageStore {
     /// parser's own span-carrying [`ParseError`] rather than [`StoreError`]
     /// so the caller can render the error under the offending byte range.
     fn parse(&self, src: &str) -> Result<Predicate, ParseError>;
+
+    // ---- selections (P3.6, invariant I7) — all delegate to P2.7's API;
+    // no selection membership is ever computed or cached by the TUI itself.
+
+    fn toggle(&self, package_id: i64) -> Result<bool, StoreError>;
+    fn is_marked(&self, package_id: i64) -> Result<bool, StoreError>;
+    fn mark(&self, package_id: i64) -> Result<(), StoreError>;
+    fn select_by_query(&self, pred: &Predicate, mode: SelectionMode) -> Result<usize, StoreError>;
+    fn save_as(&self, name: &str) -> Result<(), StoreError>;
+    fn load(&self, name: &str) -> Result<(), StoreError>;
+    fn list_selections(&self) -> Result<Vec<SelectionSummary>, StoreError>;
 }
 
 pub struct SessionStore {
@@ -88,5 +99,55 @@ impl PackageStore for SessionStore {
                 span: None,
             },
         })
+    }
+
+    fn toggle(&self, package_id: i64) -> Result<bool, StoreError> {
+        api::toggle(&self.session, package_id).map_err(|e| StoreError(e.to_string()))
+    }
+
+    fn is_marked(&self, package_id: i64) -> Result<bool, StoreError> {
+        api::is_marked(&self.session, package_id).map_err(|e| StoreError(e.to_string()))
+    }
+
+    fn mark(&self, package_id: i64) -> Result<(), StoreError> {
+        api::mark(&self.session, package_id).map_err(|e| StoreError(e.to_string()))
+    }
+
+    fn select_by_query(&self, pred: &Predicate, mode: SelectionMode) -> Result<usize, StoreError> {
+        api::select_by_query(
+            &self.session,
+            &api::SelectByQueryRequest {
+                predicate: pred.clone(),
+                mode,
+            },
+        )
+        .map(|resp| resp.member_count)
+        .map_err(|e| StoreError(e.to_string()))
+    }
+
+    fn save_as(&self, name: &str) -> Result<(), StoreError> {
+        api::save_as(
+            &self.session,
+            &api::SaveAsRequest {
+                name: name.to_string(),
+            },
+        )
+        .map_err(|e| StoreError(e.to_string()))
+    }
+
+    fn load(&self, name: &str) -> Result<(), StoreError> {
+        api::load(
+            &self.session,
+            &api::LoadRequest {
+                name: name.to_string(),
+            },
+        )
+        .map_err(|e| StoreError(e.to_string()))
+    }
+
+    fn list_selections(&self) -> Result<Vec<SelectionSummary>, StoreError> {
+        api::list(&self.session)
+            .map(|resp| resp.selections)
+            .map_err(|e| StoreError(e.to_string()))
     }
 }

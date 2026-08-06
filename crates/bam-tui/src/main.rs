@@ -8,7 +8,7 @@ use bam_core::http::ReqwestClient;
 use bam_core::progress::{OperationId, Outcome, ProgressEvent, ProgressSink};
 use bam_core::store;
 use bam_core::store::ingest::{IngestMode, run_ingest};
-use bam_tui::app::{App, all_packages};
+use bam_tui::app::{App, CommandOutcome, all_packages};
 use bam_tui::input::{
     Action, Key, KeymapConfig, Mode, Resolution, Resolver, default_keymap, merge_keymap,
 };
@@ -99,18 +99,20 @@ fn to_input_key(code: KeyCode, modifiers: KeyModifiers) -> Option<Key> {
     match code {
         KeyCode::Esc => Some(Key::Esc),
         KeyCode::Backspace => Some(Key::Backspace),
+        KeyCode::Enter => Some(Key::Enter),
         KeyCode::Char(c) if modifiers.contains(KeyModifiers::CONTROL) => Some(Key::Ctrl(c)),
         KeyCode::Char(c) => Some(Key::Char(c)),
         _ => None,
     }
 }
 
-/// `MoveDown`/`MoveUp`/`GoTop`/`GoBottom`/`Quit` are the only actions v1's
-/// shell acts on — everything else (modes, marking, help) is later rounds'
-/// scope (P3.5-P3.9) and is resolved but ignored for now.
+/// `MoveDown`/`MoveUp`/`GoTop`/`GoBottom`/`Quit` plus P3.6's mode/marking
+/// actions. `OpenHelp` (P3.7) and the remaining motions are still resolved
+/// but ignored.
 fn apply_action(
     app: &mut App<SessionStore>,
     action: Action,
+    mode: &mut Mode,
 ) -> Result<ControlFlow<()>, StoreError> {
     use ControlFlow::{Break, Continue};
     match action {
@@ -118,6 +120,29 @@ fn apply_action(
         Action::MoveUp(n) => app.move_up(n).map(|()| Continue(())),
         Action::GoTop => app.go_top().map(|()| Continue(())),
         Action::GoBottom => app.go_bottom().map(|()| Continue(())),
+        Action::ToggleMark => {
+            app.toggle_mark()?;
+            *mode = Mode::Normal;
+            Ok(Continue(()))
+        }
+        Action::EnterMode(Mode::Visual) => {
+            app.enter_visual();
+            *mode = Mode::Visual;
+            Ok(Continue(()))
+        }
+        Action::EnterMode(Mode::Command) => {
+            *mode = Mode::Command;
+            Ok(Continue(()))
+        }
+        Action::EnterMode(Mode::Insert) => {
+            *mode = Mode::Insert;
+            Ok(Continue(()))
+        }
+        Action::LeaveMode => {
+            app.leave_visual();
+            *mode = Mode::Normal;
+            Ok(Continue(()))
+        }
         Action::Quit => Ok(Break(())),
         _ => Ok(Continue(())),
     }
@@ -134,7 +159,7 @@ fn edit_query_line(
     resolver: &mut Resolver,
 ) {
     match key {
-        Key::Esc => {
+        Key::Esc | Key::Enter => {
             *mode = Mode::Normal;
             resolver.clear();
         }
@@ -149,6 +174,53 @@ fn edit_query_line(
             app.edit_query(text, Instant::now());
         }
         Key::Ctrl(_) => {}
+    }
+}
+
+/// While in [`Mode::Command`] (entered via `:`), keys type into the command
+/// line; `Enter` runs it through [`App::run_command`] and surfaces the
+/// outcome (or error) via [`App::set_status`], `Esc` cancels. Both clear the
+/// command line and return to Normal mode.
+fn edit_command_line(app: &mut App<SessionStore>, key: Key, mode: &mut Mode) {
+    match key {
+        Key::Esc => {
+            app.clear_command();
+            *mode = Mode::Normal;
+        }
+        Key::Enter => {
+            let cmd = app.command_text().to_string();
+            match app.run_command(&cmd) {
+                Ok(outcome) => app.set_status(format_outcome(outcome)),
+                Err(e) => app.set_status(e.to_string()),
+            }
+            app.clear_command();
+            *mode = Mode::Normal;
+        }
+        Key::Backspace => {
+            let mut text = app.command_text().to_string();
+            text.pop();
+            app.edit_command(text);
+        }
+        Key::Char(c) => {
+            let mut text = app.command_text().to_string();
+            text.push(c);
+            app.edit_command(text);
+        }
+        Key::Ctrl(_) => {}
+    }
+}
+
+fn format_outcome(outcome: CommandOutcome) -> String {
+    match outcome {
+        CommandOutcome::MemberCount(n) => format!("{n} marked"),
+        CommandOutcome::Saved => "saved".to_string(),
+        CommandOutcome::Loaded => "loaded".to_string(),
+        CommandOutcome::Selections(selections) => selections
+            .into_iter()
+            .map(|s| format!("{} ({})", s.name, s.member_count))
+            .collect::<Vec<_>>()
+            .join(", "),
+        CommandOutcome::Unknown(word) => format!("unknown command: {word}"),
     }
 }
 
@@ -175,13 +247,13 @@ fn run_loop(
                 edit_query_line(app, key, &mut mode, resolver);
                 continue;
             }
+            if mode == Mode::Command {
+                edit_command_line(app, key, &mut mode);
+                continue;
+            }
 
             if let Resolution::Resolved(action) = resolver.handle_key(key) {
-                if action == Action::EnterMode(Mode::Insert) {
-                    mode = Mode::Insert;
-                    continue;
-                }
-                match apply_action(app, action) {
+                match apply_action(app, action, &mut mode) {
                     Ok(ControlFlow::Break(())) => return Ok(()),
                     Ok(ControlFlow::Continue(())) => {}
                     Err(e) => return Err(std::io::Error::other(e.to_string())),
