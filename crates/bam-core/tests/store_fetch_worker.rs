@@ -343,12 +343,11 @@ async fn real_mirror_harvest_observes_rate_and_no_429s() {
             let dir = String::from_utf8_lossy(record.dir);
             let file = String::from_utf8_lossy(record.file);
             // Real convention (confirmed against ftp.fau.de's own listings,
-            // P4.5): strip the archive extension, add ".readme". Only the
-            // final `.`-delimited extension is stripped here, same as
-            // `split_name_version` (P1.6) — a `.tar.bz2` file's readme is
-            // one 404 short of correct, acceptable for a manual-only check.
-            let stem = file.rsplit_once('.').map_or(&*file, |(stem, _)| stem);
-            let url = format!("https://ftp.fau.de/aminet/{dir}/{stem}.readme");
+            // P4.5), now shared with P4.7's `Session::enqueue_readmes` via
+            // `bam_core::ingest::readme::readme_url` — a `.tar.bz2` file's
+            // readme is one 404 short of correct, acceptable for a
+            // manual-only check.
+            let url = bam_core::ingest::readme::readme_url(&dir, &file);
             enqueue(&conn, &url, "readme", 0).unwrap();
             count += 1;
             if count >= 1000 {

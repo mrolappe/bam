@@ -12,6 +12,17 @@ pub const README_HEADER_KIND: &str = "readme_header";
 /// `enrichment.producer_version` for this parser's output shape.
 pub const README_HEADER_PRODUCER_VERSION: i64 = 1;
 
+/// Base URL matching [`crate::store::ingest::INDEX_URL`]'s mirror.
+pub const AMINET_BASE_URL: &str = "https://ftp.fau.de/aminet";
+
+/// A package's readme URL: `{dir}/{stem}.readme`, the archive extension
+/// stripped (confirmed against real Aminet data in Round 24/P4.5 — `{dir}/
+/// {file}.readme` with the extension kept 404s).
+pub fn readme_url(dir: &str, file: &str) -> String {
+    let stem = file.rsplit_once('.').map_or(file, |(stem, _)| stem);
+    format!("{AMINET_BASE_URL}/{dir}/{stem}.readme")
+}
+
 /// The readme header fields Aminet packages conventionally carry. Any other
 /// field (`Architecture:`, misspellings like `Distrubution:`) is ignored.
 #[derive(Debug, Clone, Default, PartialEq, Serialize, Deserialize)]

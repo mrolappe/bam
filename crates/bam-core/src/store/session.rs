@@ -22,15 +22,25 @@ use serde::{Deserialize, Serialize};
 use thiserror::Error;
 
 use super::compile::{self, CompileError};
+use super::fetch_queue;
 use super::ingest::{self, IngestError, IngestMode};
 use super::tables::{self, Package, Selection};
 use crate::cancel::CancellationToken;
 use crate::http::HttpClient;
+use crate::ingest::readme::readme_url;
 use crate::progress::{OperationId, Outcome, ProgressEvent, ProgressSink};
 use crate::query::bam_dsl::BamDsl;
 use crate::query::ir::{Predicate, SelectionRef};
 use crate::query::lang::{LanguageError, LanguageRegistry, ParseError};
 use crate::query::registry::{FieldRegistry, package_fields};
+
+/// [`Session::enqueue_readmes`] priority for a package outside the caller's
+/// visible window — still worth fetching, just not before what's on screen.
+pub const README_PRIORITY_BACKGROUND: i64 = 0;
+/// [`Session::enqueue_readmes`] priority for a package inside the caller's
+/// visible window (§7: "boost priority for whatever the user is currently
+/// viewing so browsing stays responsive under a bulk run").
+pub const README_PRIORITY_VISIBLE: i64 = 10;
 
 #[derive(Debug, Error)]
 pub enum SessionError {
@@ -169,6 +179,47 @@ impl Session {
             .map(|id| tables::get_package(&self.conn, id).map_err(SessionError::from))
             .collect::<Result<_, _>>()?;
         Ok((packages, total))
+    }
+
+    /// Queues every package matching `pred` for a readme fetch (P4.7, §7:
+    /// "every entry surviving the active filters gets its readme queued"),
+    /// boosting priority for the `[visible_offset, visible_offset +
+    /// visible_len)` slice — the same window a caller would pass to
+    /// [`Self::search_window`] — over the rest of the result set. Ordered by
+    /// `id` to match `search_window`'s own ordering, so "visible" here means
+    /// the same rows a simultaneous windowed query would show. Already-landed
+    /// readmes ([`tables::landing_readme_exists`]) are skipped entirely, and
+    /// [`fetch_queue::enqueue`]'s own upsert (`priority = MAX(...)`) makes a
+    /// repeated call for the same query non-duplicating and never *lowers* a
+    /// url's priority once boosted.
+    pub fn enqueue_readmes(
+        &self,
+        pred: &Predicate,
+        visible_offset: usize,
+        visible_len: usize,
+    ) -> Result<(), SessionError> {
+        let compiled = self.compiled_for(pred)?;
+        let mut stmt = self
+            .conn
+            .prepare(&format!("SELECT id FROM ({}) ORDER BY id", compiled.sql))?;
+        let ids: Vec<i64> = stmt
+            .query_map(params_from_iter(compiled.params.iter()), |r| r.get(0))?
+            .collect::<Result<_, _>>()?;
+        let visible = visible_offset..visible_offset.saturating_add(visible_len);
+        for (i, id) in ids.into_iter().enumerate() {
+            let package = tables::get_package(&self.conn, id)?;
+            let url = readme_url(&package.dir, &package.file);
+            if tables::landing_readme_exists(&self.conn, &url)? {
+                continue;
+            }
+            let priority = if visible.contains(&i) {
+                README_PRIORITY_VISIBLE
+            } else {
+                README_PRIORITY_BACKGROUND
+            };
+            fetch_queue::enqueue(&self.conn, &url, "readme", priority)?;
+        }
+        Ok(())
     }
 
     pub fn get_package(&self, id: i64) -> Result<Option<Package>, SessionError> {

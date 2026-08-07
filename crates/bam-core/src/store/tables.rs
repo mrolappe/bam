@@ -233,6 +233,17 @@ pub fn insert_landing_readme(conn: &Connection, row: &LandingReadme) -> Result<i
     )
 }
 
+pub fn landing_readme_exists(conn: &Connection, url: &str) -> Result<bool> {
+    Ok(conn
+        .query_row(
+            "SELECT 1 FROM landing_readme WHERE url = ?1",
+            params![url],
+            |_| Ok(()),
+        )
+        .optional()?
+        .is_some())
+}
+
 pub fn get_landing_readme(conn: &Connection, url: &str) -> Result<LandingReadme> {
     conn.query_row(
         "SELECT id, package_id, url, fetched_at, raw, detected_encoding

@@ -1725,11 +1725,67 @@ confirming migration 5 doesn't break a fresh DB open.
 
 ---
 
+## Round 26 — 2026-08-07 · Prioritise readmes for filtered and visible entries (P4.7) — Phase 4 exit
+
+**Done:**
+
+- **P4.7** — `Session::enqueue_readmes(pred, visible_offset, visible_len)`
+  (`crates/bam-core/src/store/session.rs`, native-gated). Runs the same
+  `compiled_for(pred)` + `ORDER BY id` query `search_window` already uses (so
+  "visible" here means exactly the rows a simultaneous `search_window(pred,
+  visible_offset, visible_len)` call would show), and for each matching
+  package: computes its readme url, skips it if `landing_readme` already has
+  that url (`tables::landing_readme_exists`, new — a plain existence check
+  rather than reusing `get_landing_readme`, which fetches and decodes the
+  whole BLOB just to answer yes/no), and otherwise calls P4.1's
+  `fetch_queue::enqueue` with `README_PRIORITY_VISIBLE` (10) inside the window
+  or `README_PRIORITY_BACKGROUND` (0) outside it — both new exported
+  constants, so a caller (and the tests) never hardcodes the boost amount.
+  Two of the four test bullets fall out of P4.1's own existing semantics
+  rather than needing new logic here: "does not duplicate" is `enqueue`'s
+  pre-existing `ON CONFLICT ... priority = MAX(...)` upsert, and "already-
+  fetched readmes are not re-enqueued" is the one new check this task adds.
+
+  The readme-url computation itself (`{dir}/{stem}.readme`, extension
+  stripped) already existed, duplicated, in Round 22's `#[ignore]`d
+  real-mirror test — factored out to `ingest::readme::readme_url` (new,
+  alongside a new `AMINET_BASE_URL` constant matching `store::ingest::
+  INDEX_URL`'s mirror) rather than writing a third copy for this task; the
+  ignored test in `tests/store_fetch_worker.rs` now calls the shared function
+  too, so there is exactly one place this convention lives. No `api::`
+  wrapper was added — same precedent as P4.1/P4.2/P4.3's queue/worker
+  internals, which stay at the `store::`/`Session` level with no typed
+  request/response pair until an actual UI caller needs one; nothing in this
+  task's four bullets or hand-over asks for TUI wiring.
+
+  Four tests in the new `tests/store_enqueue_readmes.rs`, matching the phase
+  doc's four bullets exactly, against a real file-backed `Session` seeded
+  with ten same-`dir` packages (same pattern as `store_session_window.rs`):
+  a query's full result set matches the queue's urls exactly; every url
+  inside `[visible_offset, visible_offset+visible_len)` carries
+  `README_PRIORITY_VISIBLE` and every other url carries
+  `README_PRIORITY_BACKGROUND`; running the same query twice leaves exactly
+  ten rows in `fetch_queue`, not twenty; a package with a pre-existing
+  `landing_readme` row is excluded from the queue entirely while its two
+  siblings are enqueued.
+
+147 tests total (4 new + 143 pre-existing; 145 run, 2 ignored — the two
+pre-existing real-mirror tests, unaffected beyond the one shared-function line
+each touches). `cargo fmt --check`, `cargo clippy --workspace --all-targets --
+-D warnings`, and the wasm32 `--no-default-features` check all clean.
+
+**No deviations.**
+
+**Phase 4 exit reached.** Full-text search over real readme content,
+harvested politely and resumably, with visible/filtered entries prioritised.
+
+---
+
 ## Next task
 
-P4.6 is done. Next is **P4.7** (prioritise readmes for filtered and visible
-entries) — see
-[phase-4-harvest-search.md](docs/plan/phase-4-harvest-search.md).
+Phase 4 is done. Next is **Phase 5** — blob cache, unpacker registry, `.uaem`
+— see
+[phase-5-cache-extraction.md](docs/plan/phase-5-cache-extraction.md).
 
 ---
 
