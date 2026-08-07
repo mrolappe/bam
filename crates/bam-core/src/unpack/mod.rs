@@ -8,7 +8,7 @@ use std::path::{Path, PathBuf};
 
 use thiserror::Error;
 
-use crate::blob::BlobHash;
+use crate::blob::{BlobError, BlobHash};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ArchiveFormat {
@@ -68,6 +68,12 @@ pub enum UnpackError {
     NoAvailableUnpacker { format: ArchiveFormat },
     #[error("io error: {0}")]
     Io(#[from] std::io::Error),
+    #[error("blob error: {0}")]
+    Blob(#[from] BlobError),
+    #[error("archive entry '{entry}' contains a path-traversal component; rejected")]
+    PathTraversal { entry: String },
+    #[error("archive extraction failed: {message}")]
+    ExtractionFailed { message: String },
 }
 
 pub trait Unpacker {
@@ -126,3 +132,8 @@ impl Default for UnpackerRegistry {
         Self::new()
     }
 }
+
+#[cfg(feature = "native")]
+mod unar;
+#[cfg(feature = "native")]
+pub use unar::UnarUnpacker;

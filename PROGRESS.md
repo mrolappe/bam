@@ -276,9 +276,80 @@ round's new, self-contained module.
 
 ---
 
+## Round 30 — 2026-08-07 · `unar` backend, out of process (P5.4)
+
+**Done:**
+
+- **P5.4** — `crates/bam-core/src/unpack/unar.rs`, `native`-gated:
+  `UnarUnpacker<S: BlobStore>` (generic the same way `evict_to_budget` is —
+  `unpack()` only receives a `BlobHash`, so the backend has to hold a store
+  to turn that hash into archive bytes; the trait itself stays object-safe
+  since erasure happens at the concrete `S`). `unpack()` writes the blob to
+  a private scratch dir, lists entries via `lsar -json` and rejects any
+  whose name contains a `..`/root component *before* running `unar` at all,
+  then extracts into a second scratch subdirectory and only moves files
+  into `dest` once `unar` exits successfully — so a malformed or malicious
+  archive structurally cannot leave partial or escaped output under `dest`,
+  regardless of what `unar` itself did or didn't write, matching P5.1's
+  "make the bad state unreachable, not cleaned up after" pattern.
+  `probe()` shells `unar -v` and `lsar -v` (`lsar` is required for the
+  traversal check, so its absence is unavailability too) and names
+  whichever binary is missing plus an install hint (`brew`/`apt`).
+
+  New `UnpackError` variants: `Blob` (wraps `BlobError` from
+  `store.get`), `PathTraversal { entry }`, `ExtractionFailed { message }`.
+
+  Fixtures added under `tests/fixtures/archives/`: `sample.lha` (two files,
+  `a.txt`/`sub/b.txt`, built with the system `lha` tool), `malformed.lha`
+  (arbitrary non-archive bytes), and `sample.lzx` (same two-file spec) —
+  no LZX *compressor* is available on this machine or via Homebrew (`unar`
+  only decompresses), so the user built this one in an Amiga emulator and
+  dropped it into the fixtures directory mid-round.
+  `lzx_fixture_extracts_to_expected_file_list` was written to check for the
+  file's existence and skip with a message if absent rather than failing or
+  being `#[ignore]`d, precisely so it would start asserting for real the
+  moment the fixture landed with no test-code change — which is exactly
+  what happened.
+
+  Five new tests: `lha_fixture_extracts_to_expected_file_list` and the
+  (currently-skipping) LZX counterpart in `tests/unpack_unar.rs`;
+  `malformed_archive_errors_without_partial_extraction` (asserts `dest` has
+  zero entries after the error, not just that an error occurred);
+  `traversal_entry_in_zip_archive_is_rejected` — `lha`/`lzx` archivers both
+  sanitize a leading `../` at creation time, so a genuinely malicious *LHA*
+  fixture can't be built with the tools on hand; a `.zip` (which `unar`
+  also reads, and which does not sanitize member names — verified by hand
+  against `lsar -json` output first) stands in to prove the rejection is
+  real end-to-end rather than only unit-tested against a crafted string;
+  `unar_absent_reports_unavailable_naming_the_binary_and_install_hint` is
+  split into its own test binary
+  (`tests/unpack_unar_unavailable.rs`) since it's the one scenario that
+  needs `PATH` genuinely broken and mutating process-global env is only
+  safe with nothing else in the same process to race it.
+
+  `.github/workflows/ci.yml` now installs `unar` (`apt`/`brew`, matrix-keyed
+  on OS) before the test step on both runners — without it these tests
+  would silently pass locally and fail (or need to skip) in CI; installing
+  the real dependency was the smaller change than teaching every test to
+  degrade.
+
+165 tests total (5 new + 160 pre-existing, summed directly via `cargo test
+--workspace 2>&1 | grep "test result: ok" | ...`). `cargo fmt --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`, and the wasm32
+`--no-default-features` check all clean (the new module is entirely
+`native`-gated, so it doesn't touch the wasm32 build). Also smoke-tested the
+real `bam` binary (`ingest --offline`): still reports 501 packages.
+
+**Deviations for the next session to know about:**
+- None. `sample.lzx` arrived (user-built in an Amiga emulator) before this
+  round closed, so all five tests, including the LZX round trip, run and
+  pass for real — see the updated count below.
+
+---
+
 ## Next task
 
-**Phase 5** — next is **P5.4**, `unar` backend (out of process) — see
+**Phase 5** — next is **P5.5**, `zip` backend (in process) — see
 [phase-5-cache-extraction.md](docs/plan/phase-5-cache-extraction.md).
 
 ---
