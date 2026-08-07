@@ -23,6 +23,11 @@ pub struct HttpResponse {
 pub enum HttpError {
     #[error("http request failed: {0}")]
     Request(String),
+    /// A response outside 2xx/304, with the status code broken out so a
+    /// caller (P4.3's worker) can tell a retryable 429/5xx from a permanent
+    /// 4xx without parsing [`HttpError::Request`]'s message string.
+    #[error("http request failed: unexpected status {0}")]
+    Status(u16),
 }
 
 // Used only via generics (`impl HttpClient`, never `dyn`), so the missing

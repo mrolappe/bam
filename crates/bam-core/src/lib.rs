@@ -7,11 +7,26 @@ pub mod ingest;
 pub mod progress;
 pub mod query;
 pub mod ratelimit;
+pub mod robots;
 #[cfg(feature = "native")]
 pub mod store;
 
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")
+}
+
+/// Unix timestamp (seconds) as RFC3339 — shared by [`now_rfc3339`] and by
+/// P4.3's worker, which needs to stamp a computed `now + backoff` moment,
+/// not just "now", without a date-arithmetic dependency.
+pub fn rfc3339_from_unix(secs: u64) -> String {
+    let (y, m, d) = ingest::normalize::civil_from_days((secs / 86_400) as i64);
+    let rem = secs % 86_400;
+    format!(
+        "{y:04}-{m:02}-{d:02}T{:02}:{:02}:{:02}Z",
+        rem / 3600,
+        (rem % 3600) / 60,
+        rem % 60
+    )
 }
 
 /// Current UTC time as RFC3339, for stamping a landing fetch's `fetched_at`.
@@ -22,12 +37,5 @@ pub fn now_rfc3339() -> String {
         .duration_since(UNIX_EPOCH)
         .unwrap_or_default()
         .as_secs();
-    let (y, m, d) = ingest::normalize::civil_from_days((secs / 86_400) as i64);
-    let rem = secs % 86_400;
-    format!(
-        "{y:04}-{m:02}-{d:02}T{:02}:{:02}:{:02}Z",
-        rem / 3600,
-        (rem % 3600) / 60,
-        rem % 60
-    )
+    rfc3339_from_unix(secs)
 }

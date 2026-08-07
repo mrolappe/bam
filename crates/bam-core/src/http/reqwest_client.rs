@@ -55,7 +55,7 @@ impl HttpClient for ReqwestClient {
             });
         }
         if !resp.status().is_success() {
-            return Err(HttpError::Request(format!("unexpected status {status}")));
+            return Err(HttpError::Status(status));
         }
 
         let body = resp

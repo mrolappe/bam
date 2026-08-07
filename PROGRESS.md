@@ -1430,9 +1430,113 @@ warnings`, and the wasm32 `--no-default-features` check all clean.
 
 ---
 
+## Round 22 — 2026-08-07 · Background fetch worker (P4.3)
+
+**Done:**
+
+- **P4.3** — `crates/bam-core/src/store/fetch_worker.rs` (native-gated, inside
+  `store::` per I1 — it mixes P4.1's `fetch_queue` with `HttpClient`, same
+  reasoning as P1.9's `store::fetch`). One entry point, `step()`: rate-limit
+  (P4.2's `TokenBucket::try_acquire`, checked *before* claiming, so a
+  rate-limited call touches the DB not at all), atomically claim (P4.1's
+  `claim_next`), check `robots.txt` (new), fetch (P1.9's `HttpClient`), record
+  the outcome. One queue item per call, never an internal loop — the caller
+  drives pacing and can check a `CancellationToken` between calls, matching
+  I5's convention. `RobotsCache` (`HashMap<origin, RobotsRules>`) is threaded
+  in by the caller so a bulk run fetches each origin's `robots.txt` once.
+
+  New `bam_core::robots` module (top-level, ungated like `http`/`ratelimit` —
+  parsing is pure, `fetch_rules` is generic over `HttpClient`): parses only
+  the `User-agent: *` group's `Disallow` lines (bam is a generic polite
+  crawler, not a named one a site would single out — a full RFC 9309
+  implementation with `Allow` overrides and crawl-delay is more than anything
+  here needs), permissive on any fetch failure or non-200 (a broken
+  `robots.txt` must never itself block otherwise-permitted fetches). No `url`
+  crate dependency: `origin_and_path` is a dozen-line hand-rolled split, the
+  only thing either caller (this module, the worker) needs from a URL.
+
+  `HttpError` gained a `Status(u16)` variant (`http/mod.rs`); `reqwest_client.rs`
+  now returns it instead of folding the code into `Request`'s message string —
+  needed so the worker can pattern-match 429/5xx (retryable) against
+  everything else (permanent) without parsing text. `lib.rs`'s `now_rfc3339`
+  was split to expose `rfc3339_from_unix(secs: u64)`, so the worker can stamp
+  a computed `now + backoff` moment as RFC3339 without a date-arithmetic
+  dependency — it already had `civil_from_days` for exactly this from P1.6.
+
+  **Design decision beyond the phase doc's text, needed to make "restarting
+  does not re-fetch completed items" true rather than aspirational:**
+  `fetch_queue::mark_success` gained a fifth parameter, `next_attempt_at:
+  Option<&str>`, COALESCE'd exactly like the existing `etag` parameter (`None`
+  leaves it unchanged — the two P4.1 tests calling it needed one added `None`
+  argument each, no assertion changed). Without this, a successfully-fetched
+  item's `next_attempt_at` stays `NULL` forever (nothing in the original P4.1
+  schema/functions ever sets it on success), so `claim_next`'s own "always
+  due" gate would let it be reclaimed and re-fetched indefinitely — priority
+  order, not completion, would be the only thing standing between it and a
+  future `claim_next` call. The worker passes `Some(FAR_FUTURE)` (a
+  `"2999-01-01T00:00:00Z"` sentinel, the same convention P4.1's own tests
+  already use for "never") on *both* a fresh 200 and a confirmed-unchanged
+  304 — a confirmed-unchanged fetch is exactly as complete as a fresh one, so
+  both permanently retire the item from automatic reclaiming. A robots-txt
+  disallow or a permanent (non-429/5xx) failure also gets `FAR_FUTURE` via
+  `mark_failure`, for the same reason: none of these are conditions a bare
+  retry would fix.
+
+  Six tests: five in the new `tests/store_fetch_worker.rs` (the phase doc's
+  five offline groups, table for table), plus one `#[ignore]`d real-mirror
+  test. All five use a `ByUrlClient` (a response queue keyed by URL, request
+  order preserved for assertions) that **panics on any unscripted URL** — the
+  same "prove no network is touched" pattern Round 6's `IngestMode::
+  RebuildNormalized` test established, here proving a robots-disallowed or
+  already-completed URL is never requested a second time, not merely
+  asserting it after the fact. The 429-backoff test recomputes each expected
+  timestamp via `rfc3339_from_unix` rather than parsing RFC3339 back to an
+  integer (no parser exists or is needed elsewhere) and asserts the delay
+  sequence is strictly `[1, 2, 4]` seconds. The ETag test seeds a stored ETag
+  by direct SQL rather than by chaining off an earlier successful fetch — with
+  success now permanently retiring an item, "fetch the same completed item
+  twice" is no longer a real scenario the worker itself produces; a
+  pre-existing stored ETag on an as-yet-unfetched item (e.g. carried over by
+  a future seeding/migration step) is the honest way to exercise conditional
+  GET. The restart test reopens a **file-backed** `Connection` (not
+  `:memory:`) to a temp path to prove durability, not just in-memory dedup,
+  and gives the already-completed item the *higher* priority of the two so
+  the assertion tests exclusion-by-completion rather than accidentally
+  passing via priority ordering. The priority-boost test doesn't add any
+  worker logic beyond what `claim_next`'s pre-existing `ORDER BY priority
+  DESC` and `enqueue`'s pre-existing `MAX(priority, ...)` upsert already do —
+  it exists to prove the wiring end-to-end, not to add a feature.
+
+130 tests total (6 new — 5 in `store_fetch_worker.rs`, 1 `#[ignore]`d — plus
+124 pre-existing; 128 run, 2 ignored — `real_mirror_fetch` from P1.9 and this
+round's own real-mirror test). `cargo fmt --check`, `cargo clippy --workspace
+--all-targets -- -D warnings`, and the wasm32 `--no-default-features` check
+all clean. Also smoke-tested the real `bam` binary (`ingest --offline`):
+still reports 501 packages, unaffected by this round's store/http changes.
+
+**Deviations for the next session to know about:**
+- `fetch_queue::mark_success`'s signature changed (new `next_attempt_at`
+  parameter) — a P4.1 boundary was touched, not just built on top of. Flagged
+  per the project's own convention (Round 5, Round 20) for any change that
+  reopens a prior round's "done" schema/function; both existing P4.1 test call
+  sites were updated (`None`, preserving every existing assertion) rather than
+  reinterpreted.
+- No `type = 'archive'`-specific handling exists yet — `kind` is passed
+  through untouched; P4.3's own scope is generic across whatever `kind` a
+  caller enqueues. Nothing in §7 or the phase doc's test list distinguishes
+  by kind, so none was added.
+- The `#[ignore]`d real-mirror test builds up to 1,000 readme URLs from
+  `index_sample.txt` (only 501 are available in that fixture — Round 1's own
+  curated size) rather than fixture-manufacturing a full 1,000; guesses the
+  Aminet convention `{dir}/{file}.readme` for each entry's readme URL (not
+  independently verified against a real mirror this round — it is, after all,
+  never run in CI). Not executed this round; run manually before trusting it.
+
+---
+
 ## Next task
 
-P4.2 is done. Next is **P4.3** (background fetch worker) — see
+P4.3 is done. Next is **P4.4** (readme landing storage) — see
 [phase-4-harvest-search.md](docs/plan/phase-4-harvest-search.md).
 
 ---

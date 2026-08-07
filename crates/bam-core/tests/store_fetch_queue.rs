@@ -123,7 +123,14 @@ fn mark_success_clears_the_claim_and_updates_the_etag() {
     enqueue(&conn, "https://example.invalid/a", "readme", 0).unwrap();
     claim_next(&conn, FAR_FUTURE, NEVER_STALE).unwrap().unwrap();
 
-    mark_success(&conn, "https://example.invalid/a", 200, Some("etag-1")).unwrap();
+    mark_success(
+        &conn,
+        "https://example.invalid/a",
+        200,
+        Some("etag-1"),
+        None,
+    )
+    .unwrap();
     let item = get(&conn, "https://example.invalid/a").unwrap().unwrap();
     assert_eq!(item.last_status, Some(200));
     assert_eq!(item.etag.as_deref(), Some("etag-1"));
@@ -131,7 +138,7 @@ fn mark_success_clears_the_claim_and_updates_the_etag() {
 
     // A subsequent 304 (no new ETag) leaves the stored one untouched.
     claim_next(&conn, FAR_FUTURE, NEVER_STALE).unwrap().unwrap();
-    mark_success(&conn, "https://example.invalid/a", 304, None).unwrap();
+    mark_success(&conn, "https://example.invalid/a", 304, None, None).unwrap();
     let item = get(&conn, "https://example.invalid/a").unwrap().unwrap();
     assert_eq!(item.last_status, Some(304));
     assert_eq!(item.etag.as_deref(), Some("etag-1"));

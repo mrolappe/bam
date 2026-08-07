@@ -65,13 +65,24 @@ pub fn claim_next(
 
 /// Marks a claimed item as successfully fetched: clears the claim, records
 /// the response status, and updates the stored ETag when one was returned
-/// (a 304 passes `None` to leave the existing ETag untouched).
-pub fn mark_success(conn: &Connection, url: &str, status: i64, etag: Option<&str>) -> Result<()> {
+/// (a 304 passes `None` to leave the existing ETag untouched). `next_attempt_at`
+/// follows the same "`None` leaves it unchanged" convention as `etag` — P4.3's
+/// worker passes a far-future sentinel to mark the item permanently done
+/// (never automatically reclaimed), while `None` is available for a caller
+/// that only wants to record the outcome without touching scheduling.
+pub fn mark_success(
+    conn: &Connection,
+    url: &str,
+    status: i64,
+    etag: Option<&str>,
+    next_attempt_at: Option<&str>,
+) -> Result<()> {
     conn.execute(
         "UPDATE fetch_queue
-         SET claimed_at = NULL, last_status = ?2, etag = COALESCE(?3, etag)
+         SET claimed_at = NULL, last_status = ?2, etag = COALESCE(?3, etag),
+             next_attempt_at = COALESCE(?4, next_attempt_at)
          WHERE url = ?1",
-        params![url, status, etag],
+        params![url, status, etag, next_attempt_at],
     )?;
     Ok(())
 }
