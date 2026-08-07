@@ -347,9 +347,63 @@ real `bam` binary (`ingest --offline`): still reports 501 packages.
 
 ---
 
+## Round 31 — 2026-08-07 · `zip` backend, in process (P5.5)
+
+**Done:**
+
+- **P5.5** — `crates/bam-core/src/unpack/zip_backend.rs`, `native`-gated:
+  `ZipUnpacker<S: BlobStore>`, generic the same way `UnarUnpacker` is. Adds
+  `ArchiveFormat::Zip`, detected from the `PK\x03\x04` local-file-header
+  magic bytes (§P5.3's "magic bytes, never extension" rule extended to the
+  new format). `probe()` always reports `Available` — no external binary,
+  the one difference the phase doc calls out between this backend and
+  `unar`'s. Path-traversal rejection reuses `ZipFile::enclosed_name()`
+  (returns `None` for a `../`/absolute member name) rather than
+  reimplementing `unar`'s hand-rolled component check against `lsar -json`
+  output — the crate already does the validation `unar` has to do by hand
+  because it has no equivalent in-process. Checked over every entry in a
+  first pass before any file is written, so a traversal entry anywhere in
+  the archive leaves nothing under `dest`, matching `unar`'s all-or-nothing
+  extraction from P5.4.
+
+  `zip` added as a new workspace dependency, `default-features = false,
+  features = ["deflate"]` — the default feature set pulls in bzip2/lzma/
+  zstd/aes-crypto, none of which this backend's fixtures or Aminet's real
+  `.zip` uploads need; `deflate` alone covers the standard method the
+  system `zip` tool also uses. `native`-gated via `dep:zip` in
+  `bam-core`'s `native` feature, same as `rusqlite`/`reqwest`/`tokio` —
+  writing extracted files still goes through `std::fs`, so I1's wasm32
+  boundary applies here exactly as it does to `unar`.
+
+  Four tests in the new `tests/unpack_zip.rs`, matching the phase doc's
+  four bullets exactly, fixtures built in-test with `zip::ZipWriter`
+  rather than checked-in binary files (no external `zip`/`unzip` tool
+  needed, unlike P5.4's LHA/LZX fixtures which had no in-process writer
+  available): a two-file zip built at test time extracts to the expected
+  file list; a registry with both `ZipUnpacker` and `UnarUnpacker`
+  registered routes a zip-magic-bytes archive to `"zip"` and the existing
+  `sample.lha` fixture to `"unar"` via `detect_format`; `probe()` reports
+  `Available` with no setup; a zip containing one safe and one `../`
+  entry is rejected with `PathTraversal` and leaves `dest` empty or
+  absent.
+
+169 tests total (4 new + 165 pre-existing, summed directly via `cargo test
+--workspace 2>&1 | grep "test result: ok" | ...`). `cargo fmt --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`, and the wasm32
+`--no-default-features` check all clean (the new module is entirely
+`native`-gated). Also smoke-tested the real `bam` binary (`ingest
+--offline`): still reports 501 packages, unaffected by this round's
+self-contained new backend.
+
+**Deviations for the next session to know about:**
+- None. This round's scope matched the phase doc exactly.
+
+---
+
 ## Next task
 
-**Phase 5** — next is **P5.5**, `zip` backend (in process) — see
+**Phase 5** — next is **P5.6**, LHA extended-header reader (protection bits
+and file comments) — see
 [phase-5-cache-extraction.md](docs/plan/phase-5-cache-extraction.md).
 
 ---

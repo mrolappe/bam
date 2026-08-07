@@ -6,7 +6,7 @@ rust-version.workspace = true
 
 [features]
 default = ["native"]
-native = ["dep:rusqlite", "dep:reqwest", "dep:tokio"]
+native = ["dep:rusqlite", "dep:reqwest", "dep:tokio", "dep:zip"]
 
 [dependencies]
 serde.workspace = true
@@ -20,3 +20,4 @@ blake3.workspace = true
 rusqlite = { workspace = true, optional = true }
 reqwest = { workspace = true, optional = true }
 tokio = { workspace = true, optional = true }
+zip = { workspace = true, optional = true }

@@ -14,6 +14,7 @@ use crate::blob::{BlobError, BlobHash};
 pub enum ArchiveFormat {
     Lha,
     Lzx,
+    Zip,
 }
 
 impl ArchiveFormat {
@@ -21,17 +22,22 @@ impl ArchiveFormat {
         match self {
             ArchiveFormat::Lha => "LHA",
             ArchiveFormat::Lzx => "LZX",
+            ArchiveFormat::Zip => "ZIP",
         }
     }
 }
 
-/// LZX archives start with the literal signature `LZX\0`. LHA/LZH archives
-/// carry no fixed leading signature (the first two bytes are header size and
+/// LZX archives start with the literal signature `LZX\0`; ZIP archives with
+/// the local-file-header signature `PK\x03\x04`. LHA/LZH archives carry no
+/// fixed leading signature (the first two bytes are header size and
 /// checksum) but always spell their method id as `-lh?-` or `-lz?-` at
 /// offset 2.
 pub fn detect_format(bytes: &[u8]) -> Result<ArchiveFormat, UnpackError> {
     if bytes.starts_with(b"LZX\0") {
         return Ok(ArchiveFormat::Lzx);
+    }
+    if bytes.starts_with(b"PK\x03\x04") {
+        return Ok(ArchiveFormat::Zip);
     }
     if let Some(method) = bytes.get(2..7) {
         if (method.starts_with(b"-lh") || method.starts_with(b"-lz")) && method.ends_with(b"-") {
@@ -137,3 +143,8 @@ impl Default for UnpackerRegistry {
 mod unar;
 #[cfg(feature = "native")]
 pub use unar::UnarUnpacker;
+
+#[cfg(feature = "native")]
+mod zip_backend;
+#[cfg(feature = "native")]
+pub use zip_backend::ZipUnpacker;
