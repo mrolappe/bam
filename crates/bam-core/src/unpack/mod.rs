@@ -144,6 +144,11 @@ pub use lha_header::{
     HeaderLevel, LhaFileHeader, LhaHeaderError, ProtectionBits, parse_lha_header,
 };
 
+mod uaem;
+#[cfg(feature = "native")]
+pub use uaem::write_sidecar;
+pub use uaem::{UaemError, format_uaem_line};
+
 #[cfg(feature = "native")]
 mod unar;
 #[cfg(feature = "native")]

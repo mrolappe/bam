@@ -472,9 +472,63 @@ binary (`ingest --offline`): still reports 501 packages.
 
 ---
 
+## Round 33 — 2026-08-07 · `.uaem` sidecar writer (P5.7)
+
+**Done:**
+
+- **P5.7** — `crates/bam-core/src/unpack/uaem.rs`, new module. Pure
+  formatting (`format_uaem_line`) stays ungated per I1 — same split as
+  `blob`/`unpack` themselves: only the actual file write
+  (`write_sidecar`, native-gated) touches `std::fs`. `format_flags` walks
+  `ProtectionBits` in the exact `hsparwed` field order the struct already
+  declares (set-lowercase, unset `-`), reusing the struct P5.6 built
+  rather than adding a second flag ordering anywhere. The timestamp comes
+  from a `SystemTime` (the archive's mtime, per the phase doc's hand-over
+  line) broken into y/m/d via `ingest::normalize::civil_from_days`
+  (`pub(crate)`, already built for `date_from_age_weeks` in Round 1) rather
+  than adding a date/time dependency the workspace has deliberately never
+  taken — h/m/s and hundredths come from straightforward integer division
+  on the Unix-epoch seconds and `subsec_millis() / 10`. A comment
+  containing `\n`/`\r` is rejected with `UaemError::InvalidComment` before
+  any formatting happens, never written raw, since it would corrupt the
+  sidecar's one-line format; `write_sidecar` appends `.uaem` to the full
+  target filename (`Foo` → `Foo.uaem`, `Foo.txt` → `Foo.txt.uaem`) via
+  `OsString`, not `Path::with_extension` (which would replace `.txt`
+  rather than append).
+
+  Five tests in the new `tests/unpack_uaem.rs`, matching the phase doc's
+  five bullets exactly, all built around the literal 2001-03-11 22:15:00
+  UTC example line from §12.1 (Unix timestamp 984348900, cross-checked
+  against `date -u -r`): a known r/w/e/d-only attribute set formats to
+  that exact string byte-for-byte; an h/s-only set proves `hsparwed`
+  ordering and dash-for-absent with a `starts_with` check distinct from
+  the byte-exact test; 340ms added to the example time renders as `.34`,
+  not `.340` or `.3`; no comment omits the trailing field with no dangling
+  space; a comment with an embedded `\n` errors.
+
+181 tests total (5 new + 176 pre-existing, summed directly via `cargo test
+--workspace 2>&1 | grep "test result: ok" | ...`). `cargo fmt --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`, and the wasm32
+`--no-default-features` check all clean (`uaem.rs`'s formatting half has no
+`native` dependency, matching `lha_header.rs`). Also smoke-tested the real
+`bam` binary (`ingest --offline`): still reports 501 packages.
+
+**Deviations for the next session to know about:**
+- `write_sidecar` is not yet called from anywhere — P5.7 was scoped as
+  formatter-plus-writer only, no caller. P5.8 (archive inventory
+  enrichment) is the first task positioned to actually invoke it during
+  real extraction; it will need to source a real `SystemTime` mtime from
+  the unpacked file or the LHA header itself (P5.6's header currently
+  carries no timestamp field — only `filename`/`protection`/`comment` —
+  so whoever wires P5.8 should check whether the archive's own header
+  timestamp or the extracted file's on-disk mtime is the intended source
+  before assuming either).
+
+---
+
 ## Next task
 
-**Phase 5** — next is **P5.7**, `.uaem` sidecar writer — see
+**Phase 5** — next is **P5.8**, archive inventory enrichment — see
 [phase-5-cache-extraction.md](docs/plan/phase-5-cache-extraction.md).
 
 ---
