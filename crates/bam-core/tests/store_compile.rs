@@ -189,6 +189,8 @@ fn fixture() -> Fixture {
         .unwrap();
     }
 
+    bam_core::store::fts::rebuild_fts(&conn).unwrap();
+
     Fixture { conn, marked, ids }
 }
 

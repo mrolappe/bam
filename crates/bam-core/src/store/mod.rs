@@ -7,6 +7,7 @@ pub mod compile;
 pub mod fetch;
 pub mod fetch_queue;
 pub mod fetch_worker;
+pub mod fts;
 pub mod ingest;
 pub mod land;
 mod migrations;

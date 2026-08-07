@@ -1636,9 +1636,99 @@ all clean.
 
 ---
 
+## Round 25 — 2026-08-07 · FTS5 index over description and readme (P4.6)
+
+**Done:**
+
+- **P4.6** — `crates/bam-core/migrations/0005_fts.sql`, migration 5 registered
+  in `store/migrations.rs`: `CREATE VIRTUAL TABLE package_fts USING
+  fts5(description, readme_text, content='')`. Read as **contentless**
+  (`content=''`), not a literal external-content table synced by triggers —
+  the phase doc's own text rules out relying on triggers at all ("provide an
+  explicit rebuild path... a trigger-only design silently desynchronises"),
+  and the searchable text spans two source tables (`package.description`,
+  `landing_readme.raw`), so there's no single table an `external content`
+  declaration could point at anyway. A contentless table gets the same
+  outcome more simply: it indexes whatever text is passed at insert time and
+  stores none of it back, so `package`/`landing_readme` stay the sole record
+  of the actual text, with no triggers at all — the whole class of sync bug
+  the phase doc warns about is sidestepped by never attempting incremental
+  sync, not chased with more trigger code.
+
+  New `store::fts::rebuild_fts(conn)` (native-gated, inside `store::` per I1):
+  drops and recreates `package_fts`, then for every `package` row inserts
+  `(rowid = package.id, description, readme_text)`, where `readme_text` is
+  every `landing_readme.raw` for that `package_id` decoded via P1.5's
+  `ingest::charset::decode` and joined with `\n` (a package's own readme
+  isn't stored decoded anywhere yet — Round 24 flagged that the fetch → parse
+  → store wiring for readmes isn't built — so decoding happens fresh on each
+  rebuild rather than adding that wiring here). Always a full drop-and-
+  repopulate, never an incremental update: simplest correct behavior given
+  `normalize` (P1.6) already does full `package` rebuilds that can renumber
+  ids, and nothing in the five tests needs anything more targeted.
+
+  `store::compile::compile_fulltext` (`store/compile.rs`) is the one place
+  P4.6 asks changed: `Predicate::FullText(text)` now compiles to `id IN
+  (SELECT rowid FROM package_fts WHERE package_fts MATCH ?)`, the whole value
+  quoted as one FTS5 phrase (`"..."`, internal `"` doubled) rather than
+  treated as independently-matchable unordered terms — preserving the
+  replaced `LIKE '%...%'` fallback's word-order-sensitive substring behavior
+  instead of loosening it. The pre-existing `worked_examples_compile_and_
+  return_expected_ids` test (Round 8) exercises `"tracker module editor"` as
+  a `FullText` query; its fixture needed one added line,
+  `store::fts::rebuild_fts(&conn)` after inserting all nine rows, since that
+  test's expectations now depend on the FTS index being populated, not on
+  `description` being scanned directly.
+
+  Five tests in the new `tests/store_fts.rs`, matching the phase doc's five
+  bullets exactly: a distinctive readme-only word finds exactly its package;
+  dropping `package_fts` directly (raw SQL, not through `rebuild_fts`) and
+  calling `rebuild_fts` again reproduces identical search results; a real
+  landing line through `normalize` (P1.6) twice in a row — proving the
+  renumbered-ids case, since a bare `DELETE FROM package` followed by
+  re-insert reuses freed rowids — stays searchable by the same term after
+  each `rebuild_fts`; a direct assertion that the compiled SQL names
+  `package_fts`/`MATCH` and contains no `LIKE`; and a term present only in a
+  readme, not the description, is found.
+
+  `tests/migrations.rs`'s `db_at_version_n_only_runs_migrations_above_n` hit
+  the same false-vacuous-pass pattern Round 5/20/23 already flagged and fixed
+  for migrations 2-4 — a virtual FTS5 table registers itself plus four shadow
+  tables (`package_fts`, `_data`, `_idx`, `_docsize`, `_config`) in
+  `sqlite_master`, all five now asserted by name.
+
+143 tests total (5 new + 138 pre-existing; 141 run, 2 ignored — the two
+pre-existing real-mirror tests). `cargo fmt --check`, `cargo clippy
+--workspace --all-targets -- -D warnings`, and the wasm32
+`--no-default-features` check all clean. Also smoke-tested the real `bam`
+binary (`ingest --offline` against a scratch DB): still reports 501 packages,
+confirming migration 5 doesn't break a fresh DB open.
+
+**Deviations for the next session to know about:**
+- `package_fts` is contentless (`content=''`), not a true external-content
+  FTS5 table (`content='package'`) synced by triggers — the phase doc's own
+  header calls it "an external-content FTS5 table," but the two source
+  columns span two different tables, and the doc's own body text (no
+  triggers, explicit rebuild only) is what both readings actually agree on
+  in behavior. Revisit if a future task wants incremental (non-rebuild)
+  updates to the index — that would need real triggers on `package` and
+  `landing_readme`, which don't exist.
+- `rebuild_fts` re-decodes every readme's raw bytes on every call rather than
+  reading a stored decoded copy, because no such copy exists yet (Round 24's
+  own flagged gap: readme fetch → parse → `enrichment` storage isn't wired).
+  Revisit together if that wiring lands and a decoded readme text becomes
+  available to read instead of re-derived.
+- `rebuild_fts` is O(packages) queries for readme text (one `SELECT ... WHERE
+  package_id = ?` per package) rather than one joined query — simplest
+  correct thing at the current fixture/test scale; revisit if a full-catalog
+  rebuild (thousands of packages) is ever measured to be slow.
+
+---
+
 ## Next task
 
-P4.5 is done. Next is **P4.6** (FTS5 index over description and readme) — see
+P4.6 is done. Next is **P4.7** (prioritise readmes for filtered and visible
+entries) — see
 [phase-4-harvest-search.md](docs/plan/phase-4-harvest-search.md).
 
 ---

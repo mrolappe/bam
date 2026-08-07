@@ -219,13 +219,14 @@ fn compile_match(
 /// (SQLite `LIKE` wildcards) and the escape character itself are escaped
 /// so a literal search for e.g. `demo_pack` doesn't act as a wildcard —
 /// common in Aminet filenames.
+/// Compiles to an FTS5 phrase match over `package_fts` (P4.6), populated by
+/// `store::fts::rebuild_fts`. Quoting the whole value as one phrase preserves
+/// the LIKE fallback's word-order-sensitive substring behavior, rather than
+/// treating each word as an independently-matchable, unordered term.
 fn compile_fulltext(text: &str, params: &mut Vec<SqlValue>) -> String {
-    let escaped = text
-        .replace('\\', "\\\\")
-        .replace('%', "\\%")
-        .replace('_', "\\_");
-    params.push(SqlValue::Text(format!("%{escaped}%")));
-    "description LIKE ? ESCAPE '\\'".to_string()
+    let escaped = text.replace('"', "\"\"");
+    params.push(SqlValue::Text(format!("\"{escaped}\"")));
+    "id IN (SELECT rowid FROM package_fts WHERE package_fts MATCH ?)".to_string()
 }
 
 fn compile_in_selection(
