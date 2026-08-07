@@ -400,10 +400,81 @@ self-contained new backend.
 
 ---
 
+## Round 32 — 2026-08-07 · LHA extended-header reader (P5.6)
+
+**Done:**
+
+- **P5.6** — `crates/bam-core/src/unpack/lha_header.rs`, new module, ungated
+  (pure byte-slice parsing, no I/O — same shape as `detect_format`).
+  `parse_lha_header(bytes) -> (LhaFileHeader, bytes_consumed)` handles all
+  three header levels. Levels 1/2 walk the documented extended-header chain
+  (`[type][data][next-size]`, terminated by `next-size == 0`); level 0 reads
+  the fixed fields directly and, if `header_size` claims more bytes than the
+  standard layout accounts for, treats the trailing bytes as an OS-specific
+  extension keyed by a leading OS-ID byte — the same mechanism level-0
+  archives built by the system `lha` tool were found to use for embedding
+  Unix permissions (confirmed by hand-decoding a real level-0 fixture against
+  `lha v`'s own listing while writing this).
+
+  **Deviation flagged in the code itself, not just here:** research this
+  round found no authoritative spec for the *Amiga-specific* extended-header
+  content (protection bits/comment) — neither the LHa-for-UNIX header spec
+  nor libarchive's LHA reader documents it, and the real AmigaOS `LhA`
+  archiver has no source available to consult. Per the user's explicit
+  decision this round (asked directly, given a real spec gap: "best-effort +
+  ponytail flag, real fixtures later" over waiting or skipping), the OS-ID
+  byte `'A'` and the extension layout `[protection: u32 LE][comment_len: u8
+  or via ext-type 0x47 for level 1/2][comment]` are this codebase's own
+  invented placeholder, marked with a `ponytail:` comment naming exactly
+  what's unverified and what would replace it (a real Amiga-built `.lha` and
+  an `lha -v`-equivalent oracle). `ProtectionBits::from_amiga_u32`'s
+  HSPARWED bit semantics (bits 0-3 inverted for d/e/w/r, bits 4-7 direct for
+  a/p/s/h) are the one part of the Amiga side that *is* standard AmigaDOS
+  `FIBB_*` protection-flag semantics, independent of the LHA encoding
+  question.
+
+  Seven tests in the new `tests/unpack_lha_header.rs`, covering the phase
+  doc's five groups with this round's substitution made explicit in the test
+  file's own doc comment: three real fixtures (`lha_header_level{0,1,2}.lha`,
+  built with the system `lha` tool, one per level) parse correctly and yield
+  `protection: None, comment: None` — satisfying "all three levels parse"
+  and "no extended headers yields defaults, not garbage" against a genuine
+  `lha v`-cross-checked oracle; two *synthetic* fixtures (hand-built by the
+  test itself, not real Amiga archives) exercise the S-bit and E-bit paths
+  through the placeholder encoding, standing in for the phase doc's "two real
+  `.lha` fixtures... verified against `lha -v`" bullet until real ones exist;
+  a comment round-trips through the same synthetic path; a truncated header
+  and a malformed extension-chain block-size both error rather than reading
+  past the buffer or panicking (added a `MalformedExtension` error variant
+  once hand-tracing the real level-1 fixture's chain showed a
+  `next_size < 3` value would otherwise underflow the slice index).
+
+176 tests total (7 new + 169 pre-existing, summed directly via `cargo test
+--workspace 2>&1 | grep "test result: ok" | ...`). `cargo fmt --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`, and the wasm32
+`--no-default-features` check all clean (the new module has no `native`
+dependency, unlike P5.4/P5.5's backends). Also smoke-tested the real `bam`
+binary (`ingest --offline`): still reports 501 packages.
+
+**Deviations for the next session to know about:**
+- The Amiga protection-bits/comment encoding (`AMIGA_OS_ID = 'A'`,
+  `AMIGA_EXT_TYPE = 0x47`, the `[u32 protection][comment]` layout) is an
+  unverified placeholder — see the `ponytail:` comment at the top of
+  `unpack/lha_header.rs`. It has never been checked against a real
+  Amiga-built archive or `lha -v`. Whoever next has access to a real
+  Amiga-native `.lha` with S-bit scripts (or the actual AmigaOS `LhA`
+  archiver source) should treat this as the first thing to correct, the way
+  Round 30's `sample.lzx` corrected an until-then-skipped test the moment a
+  real fixture arrived.
+- `LhaFileHeader`/`parse_lha_header` are not yet wired into any unpacker's
+  `unpack()` — P5.6 was scoped as parser-only per the phase doc. P5.7 (the
+  `.uaem` sidecar writer) is what will actually consume `ProtectionBits`.
+
+---
+
 ## Next task
 
-**Phase 5** — next is **P5.6**, LHA extended-header reader (protection bits
-and file comments) — see
+**Phase 5** — next is **P5.7**, `.uaem` sidecar writer — see
 [phase-5-cache-extraction.md](docs/plan/phase-5-cache-extraction.md).
 
 ---
