@@ -1312,11 +1312,64 @@ closing line.
 
 ---
 
+## Round 20 — 2026-08-07 · `fetch_queue` schema and atomic claim (P4.1) — Phase 4 start
+
+**Done:**
+
+- **P4.1** — `crates/bam-core/migrations/0003_fetch_queue.sql` (the phase
+  doc's `fetch_queue` table verbatim), migration 3 registered in
+  `store/migrations.rs`. New `store::fetch_queue` module (native-gated,
+  inside `store::` per I1): `enqueue` (upsert, `priority = MAX(existing,
+  new)` on conflict — a re-enqueue never lowers an already-boosted
+  priority), `claim_next(now, stale_before)`, `mark_success`, `mark_failure`,
+  `get`. The atomic claim is one `UPDATE fetch_queue SET claimed_at = ?1
+  WHERE url = (SELECT ... ORDER BY priority DESC, url ASC LIMIT 1) RETURNING
+  ...` — a single statement, so SQLite's own write lock on the row selection
+  (not a separate check-then-act pair) is what stops two callers from
+  claiming the same row; `url ASC` as the tiebreak makes the claimed row
+  deterministic when priorities match, needed for the priority test to
+  assert a specific url rather than "one of the equal-priority set."
+  `claimed_at IS NULL OR claimed_at <= stale_before` is what makes an
+  abandoned claim reclaimable — a crashed worker's claim was never cleared
+  by `mark_success`/`mark_failure`, so a caller-chosen staleness cutoff
+  reclaims it exactly like an unclaimed row. Also added
+  `conn.busy_timeout(Duration::from_secs(5))` to `store::open` (previously
+  unset) — needed for the concurrency test itself: without it, two real
+  connections to the same file hammering the same `UPDATE` would surface
+  `SQLITE_BUSY` as an error instead of blocking and retrying, which is the
+  actual behavior a multi-worker deployment needs too, not just a test
+  convenience. Six tests in the new `tests/store_fetch_queue.rs` (five from
+  the phase doc's list plus a `mark_success`/ETag-preserved-on-304 test,
+  since `mark_success`'s `COALESCE(?3, etag)` behavior has no other test
+  coverage): the concurrency test spawns 4 real OS threads, each with its
+  own `Connection` opened via `store::open` against one temp-file DB and 40
+  queued urls, and asserts all 40 are claimed exactly once with no
+  duplicates across threads — a real multi-connection race, not a
+  single-connection stand-in for one.
+
+  Round 5's own "false-vacuous-pass" caution paid off again: adding
+  migration 3 broke `migrations.rs`'s
+  `db_at_version_n_only_runs_migrations_above_n` test the same way adding
+  migration 2 did in Round 5 — it asserted *exactly* `["http_cache"]` after
+  skipping migration 1, which migration 3's new `fetch_queue` table now
+  falsifies. Updated to assert the sorted pair `["fetch_queue",
+  "http_cache"]`, watched for and fixed before considering the round done,
+  not discovered after the fact.
+
+116 tests total (6 new + 110 pre-existing; summed via `cargo test --workspace
+2>&1 | grep -oE '[0-9]+ passed' | awk '{s+=$1} END{print s}'`, continuing
+Round 10/14's caution about hand-counting). `cargo fmt --check`, `cargo
+clippy --workspace --all-targets -- -D warnings`, and the wasm32
+`--no-default-features` check all clean.
+
+**No deviations beyond the migrations-test fix described above.**
+
+---
+
 ## Next task
 
-Phase 3 is complete. The next phase document to read is
-[phase-4-harvest-search.md](docs/plan/phase-4-harvest-search.md) (harvest +
-search), per `IMPLEMENTATION_PLAN.md`'s phase ordering.
+P4.1 is done. Next is **P4.2** (configurable token-bucket rate limiter) —
+see [phase-4-harvest-search.md](docs/plan/phase-4-harvest-search.md).
 
 ---
 
