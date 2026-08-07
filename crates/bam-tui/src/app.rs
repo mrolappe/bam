@@ -12,6 +12,7 @@ use bam_core::query::ir::{FieldId, Pattern, Predicate};
 use bam_core::query::lang::ParseError;
 use bam_core::store::tables::Package;
 
+use crate::input::Keymap;
 use crate::rules::HighlightRules;
 use crate::store::{PackageStore, StoreError, WindowResult};
 
@@ -60,6 +61,10 @@ pub struct App<S: PackageStore> {
     /// window or the rule set changes, same relationship P3.6's `marked`
     /// already has to the working selection.
     rule_hits: Vec<Vec<usize>>,
+    /// `Some` for the duration of the help overlay (P3.9) — the exact
+    /// [`Keymap`] passed to [`Self::open_help`], so the overlay renders from
+    /// the same table the resolver itself is using, never a separate copy.
+    help: Option<Keymap>,
 }
 
 impl<S: PackageStore> App<S> {
@@ -89,6 +94,7 @@ impl<S: PackageStore> App<S> {
             status: None,
             rules,
             rule_hits,
+            help: None,
         })
     }
 
@@ -143,6 +149,26 @@ impl<S: PackageStore> App<S> {
     /// the reload or disabling the other rules.
     pub fn highlight_errors(&self) -> &[String] {
         self.rules.errors()
+    }
+
+    /// Opens the help overlay (P3.9), rendering from `keymap` directly —
+    /// the caller passes the same live table it built for its own
+    /// [`crate::input::Resolver`], so the overlay and the real bindings
+    /// cannot drift apart.
+    pub fn open_help(&mut self, keymap: Keymap) {
+        self.help = Some(keymap);
+    }
+
+    pub fn close_help(&mut self) {
+        self.help = None;
+    }
+
+    pub fn help_open(&self) -> bool {
+        self.help.is_some()
+    }
+
+    pub fn help_bindings(&self) -> Option<&Keymap> {
+        self.help.as_ref()
     }
 
     pub fn query_text(&self) -> &str {

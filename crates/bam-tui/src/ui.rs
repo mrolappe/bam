@@ -97,4 +97,25 @@ pub fn render(app: &App<impl PackageStore>, frame: &mut Frame) {
     let detail =
         Paragraph::new(detail_text).block(Block::default().borders(Borders::ALL).title("detail"));
     frame.render_widget(detail, body[1]);
+
+    if let Some(keymap) = app.help_bindings() {
+        let mut lines: Vec<String> = keymap
+            .0
+            .iter()
+            .map(|(token, kind)| {
+                let name = serde_json::to_value(kind)
+                    .ok()
+                    .and_then(|v| v.as_str().map(str::to_string))
+                    .unwrap_or_default();
+                format!("{token:<8} {name}")
+            })
+            .collect();
+        lines.sort();
+        let overlay = Paragraph::new(lines.join("\n")).block(
+            Block::default()
+                .borders(Borders::ALL)
+                .title("help (esc/q to close)"),
+        );
+        frame.render_widget(overlay, frame.area());
+    }
 }

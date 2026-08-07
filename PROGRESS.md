@@ -1245,15 +1245,78 @@ round, same standing caveat as every prior TUI round.
 
 ---
 
+## Round 19 — 2026-08-07 · Help overlay (P3.9) — Phase 3 exit
+
+**Done:**
+
+- **P3.9** — `App` (`crates/bam-tui/src/app.rs`) gained `help: Option<Keymap>`
+  and `open_help(keymap)`/`close_help()`/`help_open()`/`help_bindings()`.
+  `open_help` takes the caller's own live `Keymap` by value rather than
+  reading a copy `App` holds independently — the phase doc's "render from the
+  same table P3.3 loads, so the overlay and the real keymap cannot drift
+  apart" is satisfied by construction: there is only ever the one `Keymap`
+  value, passed in, not a second copy `App` could fall out of sync with. This
+  also avoided threading a `Keymap` through `App::new`'s constructor (and
+  therefore every existing test call site across five test files) — the same
+  "grow via a setter, not the constructor" convention P3.8's
+  `set_highlight_config` already established for a caller-optional feature.
+  `ui::render` (`crates/bam-tui/src/ui.rs`) draws the overlay, when open, as a
+  full-frame bordered block listing every `"{token}  {action}"` line
+  (`serde_json`-serialized `ActionKind` name, e.g. `"move_down"` — matching
+  `bam.toml`'s own spelling — rather than a hand-written display table that
+  could drift from `ActionKind`'s real variant names), sorted by token for a
+  stable render order (`Keymap`'s underlying `HashMap` has none).
+
+  `crates/bam-tui/src/main.rs`: `apply_action` gained a `keymap: &Keymap`
+  parameter and an `Action::OpenHelp` arm calling `app.open_help(keymap.
+  clone())`; `run_loop` gained a `keymap` parameter too and, ahead of both the
+  existing Insert/Command line-editing intercepts, a check that closes the
+  overlay on `Esc` or `q` and swallows the keypress — without it, `q` would
+  still resolve through the keymap to `Action::Quit` while the overlay is
+  open, since the overlay isn't a `Mode` variant the keymap's own bindings
+  already exclude. `tui()` now builds `keymap` once and clones it into both
+  `Resolver::new` and `run_loop`, rather than `Resolver` owning the only copy
+  (it didn't expose one) — the smallest change that gives both the resolver
+  and the overlay a value to work from without duplicating `load_keymap`'s
+  file-read.
+
+  Three tests in the new `crates/bam-tui/tests/tui_help.rs`, matching the
+  phase doc's three bullets exactly: `overlay_binding_set_equals_the_active_
+  keymap` asserts set equality between `help_bindings()`'s keys and the
+  source `Keymap`'s keys (not a hardcoded list of the 22 tokens); `user_
+  override_shows_the_users_key_not_the_default` merges a `KeymapConfig`
+  override through P3.3's own `merge_keymap` first, then asserts the overlay
+  carries the override's key, not a separate hand-built `Keymap`; `open_and_
+  close_toggle_help_open` drives `open_help`/`close_help` directly. All three
+  test `App` alone (no `FakeStore` behaviour beyond satisfying the trait) —
+  the `?`-opens/`Esc`-or-`q`-closes wiring itself lives in `main.rs`'s
+  `run_loop`, untested by any prior round's convention for interactive
+  key-loop code (every TUI round's own standing caveat: the real terminal
+  loop isn't verified against a real terminal).
+
+110 tests total (3 new + 107 pre-existing). `cargo fmt --check`, `cargo
+clippy --workspace --all-targets -- -D warnings`, and the wasm32
+`--no-default-features` check all clean. Also smoke-tested the real `bam`
+binary: `ingest --offline` still reports 501 packages against a scratch DB,
+and `bam tui` against the same DB with no TTY attached still hits the clean
+`enable_raw_mode` failure path — the real interactive help-overlay loop is
+**not** verified against a real terminal this round, same standing caveat as
+every prior TUI round.
+
+**No deviations.**
+
+**Phase 3 exit reached.** A usable daily-driver TUI with configurable
+vim-style bindings, persistent selections, hot-reloadable highlighting, and a
+help overlay. Everything after this is additive, per the phase doc's own
+closing line.
+
+---
+
 ## Next task
 
-**P3.9** — Help overlay: `?` opens an overlay listing the active bindings,
-rendered from the same table P3.3 loads (`default_keymap` merged with any
-user override), so the overlay and the real keymap cannot drift apart.
-`Esc`/`q` closes it. Three tests against
-[phase-3-tui.md](docs/plan/phase-3-tui.md). `ActionKind::OpenHelp` /
-`Action::OpenHelp` already exist (Round 13) with no consumer yet — this task
-is that consumer. **Phase 3 exit** follows this task.
+Phase 3 is complete. The next phase document to read is
+[phase-4-harvest-search.md](docs/plan/phase-4-harvest-search.md) (harvest +
+search), per `IMPLEMENTATION_PLAN.md`'s phase ordering.
 
 ---
 

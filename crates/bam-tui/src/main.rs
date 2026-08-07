@@ -10,7 +10,7 @@ use bam_core::store;
 use bam_core::store::ingest::{IngestMode, run_ingest};
 use bam_tui::app::{App, CommandOutcome, all_packages};
 use bam_tui::input::{
-    Action, Key, KeymapConfig, Mode, Resolution, Resolver, default_keymap, merge_keymap,
+    Action, Key, Keymap, KeymapConfig, Mode, Resolution, Resolver, default_keymap, merge_keymap,
 };
 use bam_tui::store::{SessionStore, StoreError};
 use bam_tui::ui::render;
@@ -113,15 +113,20 @@ fn to_input_key(code: KeyCode, modifiers: KeyModifiers) -> Option<Key> {
 }
 
 /// `MoveDown`/`MoveUp`/`GoTop`/`GoBottom`/`Quit` plus P3.6's mode/marking
-/// actions. `OpenHelp` (P3.7) and the remaining motions are still resolved
+/// actions and P3.9's help overlay. The remaining motions are still resolved
 /// but ignored.
 fn apply_action(
     app: &mut App<SessionStore>,
     action: Action,
     mode: &mut Mode,
+    keymap: &Keymap,
 ) -> Result<ControlFlow<()>, StoreError> {
     use ControlFlow::{Break, Continue};
     match action {
+        Action::OpenHelp => {
+            app.open_help(keymap.clone());
+            Ok(Continue(()))
+        }
         Action::MoveDown(n) => app.move_down(n).map(|()| Continue(())),
         Action::MoveUp(n) => app.move_up(n).map(|()| Continue(())),
         Action::GoTop => app.go_top().map(|()| Continue(())),
@@ -234,6 +239,7 @@ fn run_loop(
     terminal: &mut Terminal<CrosstermBackend<Stdout>>,
     app: &mut App<SessionStore>,
     resolver: &mut Resolver,
+    keymap: &Keymap,
 ) -> std::io::Result<()> {
     let mut mode = Mode::Normal;
     loop {
@@ -249,6 +255,18 @@ fn run_loop(
                 continue;
             };
 
+            // The help overlay (P3.9) isn't a `Mode` — it's a modal overlay
+            // on top of whatever mode was active when `?` opened it — so
+            // `Esc`/`q` close it here, before either the line-editing
+            // intercepts below or the keymap (which would otherwise resolve
+            // `q` to `Quit`) ever sees the key.
+            if app.help_open() {
+                if matches!(key, Key::Esc | Key::Char('q')) {
+                    app.close_help();
+                }
+                continue;
+            }
+
             if mode == Mode::Insert {
                 edit_query_line(app, key, &mut mode, resolver);
                 continue;
@@ -259,7 +277,7 @@ fn run_loop(
             }
 
             if let Resolution::Resolved(action) = resolver.handle_key(key) {
-                match apply_action(app, action, &mut mode) {
+                match apply_action(app, action, &mut mode, keymap) {
                     Ok(ControlFlow::Break(())) => return Ok(()),
                     Ok(ControlFlow::Continue(())) => {}
                     Err(e) => return Err(std::io::Error::other(e.to_string())),
@@ -300,7 +318,8 @@ fn tui(flags: &[String]) -> ExitCode {
         eprintln!("failed to evaluate highlight rules: {e}");
         return ExitCode::FAILURE;
     }
-    let mut resolver = Resolver::new(load_keymap(&config_path));
+    let keymap = load_keymap(&config_path);
+    let mut resolver = Resolver::new(keymap.clone());
 
     if enable_raw_mode().is_err() {
         eprintln!("failed to enable raw mode (is this a real terminal?)");
@@ -309,7 +328,7 @@ fn tui(flags: &[String]) -> ExitCode {
     let mut stdout = std::io::stdout();
     let _ = stdout.execute(EnterAlternateScreen);
     let result = Terminal::new(CrosstermBackend::new(stdout))
-        .and_then(|mut terminal| run_loop(&mut terminal, &mut app, &mut resolver));
+        .and_then(|mut terminal| run_loop(&mut terminal, &mut app, &mut resolver, &keymap));
 
     let _ = disable_raw_mode();
     let _ = std::io::stdout().execute(LeaveAlternateScreen);
