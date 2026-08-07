@@ -18,6 +18,10 @@ const MIGRATIONS: &[Migration] = &[
         version: 3,
         sql: include_str!("../../migrations/0003_fetch_queue.sql"),
     },
+    Migration {
+        version: 4,
+        sql: include_str!("../../migrations/0004_landing_readme.sql"),
+    },
 ];
 
 /// Runs every migration newer than the DB's `user_version`, in order, and

@@ -1534,9 +1534,51 @@ still reports 501 packages, unaffected by this round's store/http changes.
 
 ---
 
+## Round 23 — 2026-08-07 · Readme landing storage (P4.4)
+
+**Done:**
+
+- **P4.4** — `crates/bam-core/migrations/0004_landing_readme.sql`, migration 4
+  registered in `store/migrations.rs`. `landing_readme(id, package_id, url,
+  fetched_at, raw BLOB, detected_encoding)` — `raw` is BLOB not TEXT, same
+  reasoning as `landing_index_line` (P1.2): encoding is detected later and
+  must stay correctable without re-fetching. Unlike `landing_index_line`,
+  which is append-only, this table is keyed by `UNIQUE url` and *upserted* —
+  the task's own third test bullet ("re-fetching the same URL updates rather
+  than duplicating") makes append-only wrong for this table specifically.
+  `store::tables::{LandingReadme, insert_landing_readme, get_landing_readme}`
+  follow P1.2's exact struct/insert/get shape; `insert_landing_readme` is an
+  `INSERT ... ON CONFLICT(url) DO UPDATE ... RETURNING id` (one statement,
+  same RETURNING-based id-recovery idiom P4.1's `claim_next` already
+  established for this codebase, rather than a separate check-then-act
+  select). `get_landing_readme` looks up by `url`, not `id` — the caller
+  always knows the url it just fetched, and `url` is already the table's
+  natural key. Three tests in the new `tests/store_readme.rs`, matching the
+  phase doc's three bullets exactly: exact-byte round trip (including a raw
+  byte sequence that isn't valid UTF-8, same style as `store.rs`'s existing
+  `blob_roundtrips_invalid_utf8`), `detected_encoding` stored and read back,
+  and a same-url double-insert asserted to return the same id, leave exactly
+  one row (`COUNT(*) FROM landing_readme WHERE url = ?1`), and surface the
+  second call's `raw`/`fetched_at`, not the first's.
+
+  `tests/migrations.rs`'s `db_at_version_n_only_runs_migrations_above_n` hit
+  the same false-vacuous-pass pattern Round 5/20 already flagged and fixed
+  for migrations 2 and 3: updated to assert the sorted triple
+  `["fetch_queue", "http_cache", "landing_readme"]`, caught and fixed this
+  round rather than left for the next one to rediscover.
+
+133 tests total (3 new + 130 pre-existing; 131 run, 2 ignored — the two
+pre-existing real-mirror tests). `cargo fmt --check`, `cargo clippy
+--workspace --all-targets -- -D warnings`, and the wasm32
+`--no-default-features` check all clean.
+
+**No deviations.**
+
+---
+
 ## Next task
 
-P4.3 is done. Next is **P4.4** (readme landing storage) — see
+P4.4 is done. Next is **P4.5** (readme header parser) — see
 [phase-4-harvest-search.md](docs/plan/phase-4-harvest-search.md).
 
 ---

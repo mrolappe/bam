@@ -200,6 +200,57 @@ pub fn set_etag(conn: &Connection, url: &str, etag: &str) -> Result<()> {
     Ok(())
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct LandingReadme {
+    pub id: i64,
+    pub package_id: i64,
+    pub url: String,
+    pub fetched_at: String,
+    pub raw: Vec<u8>,
+    pub detected_encoding: String,
+}
+
+/// Upserts by `url`: a re-fetch of an already-landed readme updates the
+/// existing row (id preserved) instead of duplicating it.
+pub fn insert_landing_readme(conn: &Connection, row: &LandingReadme) -> Result<i64> {
+    conn.query_row(
+        "INSERT INTO landing_readme (package_id, url, fetched_at, raw, detected_encoding)
+         VALUES (?1, ?2, ?3, ?4, ?5)
+         ON CONFLICT(url) DO UPDATE SET
+           package_id = excluded.package_id,
+           fetched_at = excluded.fetched_at,
+           raw = excluded.raw,
+           detected_encoding = excluded.detected_encoding
+         RETURNING id",
+        params![
+            row.package_id,
+            row.url,
+            row.fetched_at,
+            row.raw,
+            row.detected_encoding,
+        ],
+        |r| r.get(0),
+    )
+}
+
+pub fn get_landing_readme(conn: &Connection, url: &str) -> Result<LandingReadme> {
+    conn.query_row(
+        "SELECT id, package_id, url, fetched_at, raw, detected_encoding
+         FROM landing_readme WHERE url = ?1",
+        params![url],
+        |row| {
+            Ok(LandingReadme {
+                id: row.get(0)?,
+                package_id: row.get(1)?,
+                url: row.get(2)?,
+                fetched_at: row.get(3)?,
+                raw: row.get(4)?,
+                detected_encoding: row.get(5)?,
+            })
+        },
+    )
+}
+
 pub fn get_selection_member(
     conn: &Connection,
     selection_id: i64,

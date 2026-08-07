@@ -49,9 +49,10 @@ fn db_at_version_n_only_runs_migrations_above_n() {
     let conn = Connection::open(":memory:").unwrap();
     // Pretend migration 1 already ran, without ever running its DDL. If
     // `apply_migrations` ignored `user_version` and re-ran migration 1
-    // anyway, its tables would appear alongside migrations 2 and 3's — so
+    // anyway, its tables would appear alongside migrations 2-4's — so
     // instead prove migration 1 was skipped by checking only the later
-    // migrations' tables (`http_cache`, `fetch_queue`) exist afterwards.
+    // migrations' tables (`http_cache`, `fetch_queue`, `landing_readme`)
+    // exist afterwards.
     conn.pragma_update(None, "user_version", 1).unwrap();
 
     store::apply_migrations(&conn).unwrap();
@@ -60,6 +61,10 @@ fn db_at_version_n_only_runs_migrations_above_n() {
     tables.sort();
     assert_eq!(
         tables,
-        vec!["fetch_queue".to_string(), "http_cache".to_string()]
+        vec![
+            "fetch_queue".to_string(),
+            "http_cache".to_string(),
+            "landing_readme".to_string(),
+        ]
     );
 }
