@@ -94,6 +94,27 @@ pub fn get_package(conn: &Connection, id: i64) -> Result<Package> {
     )
 }
 
+/// Sets or clears (`hash: None`) a package's cached-archive pointer
+/// (`package.archive_hash`, migration 6). Not part of the [`Package`] struct
+/// itself — that struct is shared by every pre-P5.2 caller across the
+/// codebase, and this column is read/written only by the blob cache
+/// (P5.2, §6) so far.
+pub fn set_archive_hash(conn: &Connection, package_id: i64, hash: Option<&str>) -> Result<()> {
+    conn.execute(
+        "UPDATE package SET archive_hash = ?2 WHERE id = ?1",
+        params![package_id, hash],
+    )?;
+    Ok(())
+}
+
+pub fn get_archive_hash(conn: &Connection, package_id: i64) -> Result<Option<String>> {
+    conn.query_row(
+        "SELECT archive_hash FROM package WHERE id = ?1",
+        params![package_id],
+        |row| row.get(0),
+    )
+}
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct Enrichment {
     pub package_id: i64,

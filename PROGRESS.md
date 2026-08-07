@@ -1840,9 +1840,98 @@ pre-existing real-mirror tests). `cargo fmt --check`, `cargo clippy
 
 ---
 
+## Round 28 — 2026-08-07 · LRU eviction with pinning (P5.2)
+
+**Done:**
+
+- **P5.2** — `crates/bam-core/migrations/0006_blobs.sql`, migration 6:
+  `blobs(hash PRIMARY KEY, size, last_used, pinned)` plus `ALTER TABLE package
+  ADD COLUMN archive_hash TEXT REFERENCES blobs(hash)` — the §6 mapping table
+  P5.1 deliberately deferred (Round 27's own note: "P5.2's LRU eviction is the
+  first task that actually needs `blobs`"). `archive_hash` was **not** added
+  to the shared `Package` struct/`insert_package`/`get_package` — every
+  pre-P5.2 caller across the codebase constructs a `Package` literal (17 call
+  sites, confirmed by trying the struct-field approach first and watching it
+  break all of them), and nothing outside this round's own eviction code needs
+  to read or write the column yet. Two small raw accessors,
+  `tables::{set_archive_hash, get_archive_hash}`, cover exactly what P5.2
+  needs instead.
+
+  New `store::blob_cache` (native-gated, inside `store::` per I1):
+  `record_blob`/`touch`/`set_pinned` (thin upserts/updates on `blobs`), and
+  `evict_to_budget<B: BlobStore>(conn, store, budget_bytes)` — generic over
+  the trait (not `dyn`, since `BlobStore::get` returns `impl Read`, not
+  object-safe), so a test can pass a real `FsBlobStore`. Loops: while total
+  `blobs` size exceeds budget, pick the least-recently-used **unpinned** blob
+  (`ORDER BY last_used ASC LIMIT 1 WHERE pinned = 0`), remove its bytes via
+  `store.remove`, clear `archive_hash` on every package that pointed to it,
+  then delete its `blobs` row — **in that order**: deleting the `blobs` row
+  before clearing the referencing `package.archive_hash` trips the FK added
+  by this same migration (`foreign_keys` is on by default via `store::open`)
+  and was caught by the first test run, not reasoned out in advance. Never
+  touches `package`(rows) or `enrichment` — the eviction loop has no DELETE
+  against either table, so the hard invariant ("enrichment rows survive
+  eviction... the single most expensive mistake available in this codebase")
+  holds by the code simply not containing the capability to violate it, not
+  by a guard checking for it. Runs out of unpinned blobs before the budget is
+  met → `EvictionError::BudgetNotMet`, evicting nothing further; a pinned
+  blob is never a candidate the loop even considers, not one it considers and
+  rejects.
+
+  Five tests in the new `tests/store_blob_cache.rs`, matching the phase doc's
+  five bullets exactly, all against a real `FsBlobStore` over a temp
+  directory and real inserted blobs (not hand-written `blobs` rows with no
+  backing file) so `store.get`/`store.remove` genuinely succeed or fail:
+  a two-blob DB evicted to the pinned blob's own byte size keeps the pinned
+  file on disk and removes the other; an `enrichment` row on the evicted
+  package's own id is read back unchanged after eviction; `get_package`
+  still returns the row and `archive_hash` reads back `None` (not the stale
+  hash); three blobs with strictly increasing `last_used`, evicted to a
+  one-blob budget, removes the two oldest in age order, not insertion or
+  hash order; an all-pinned single-blob DB evicted to budget 0 returns
+  `BudgetNotMet` and the blob is still readable afterward.
+
+  `tests/migrations.rs`'s `db_at_version_n_only_runs_migrations_above_n` hit
+  a new variant of the false-vacuous-pass pattern Round 5/20/23/25 already
+  flagged for migrations 2-5: this is the first migration whose DDL
+  (`ALTER TABLE package`) requires a *prior* migration's table to actually
+  exist, which the test's own "stamp `user_version = 1`, never run migration
+  1's DDL" setup doesn't provide — caught as a real test failure (`no such
+  table: package`), not a false pass. Fixed by running migration 1's DDL
+  directly (bypassing `apply_migrations`, so it isn't the thing under test)
+  before stamping the version; the test still proves migration 1 itself
+  doesn't *re*-run (a second `CREATE TABLE package` would collide and the
+  `unwrap()` would fail) while assertion now covers the full table set.
+
+154 tests total (5 new + verified pre-existing baseline; summed directly via
+`cargo test --workspace 2>&1 | grep "test result: ok" | ...`, not taken from
+the prior round's stated count — Round 10/14's own caution, and Round 10's
+own count was off by one previously). `cargo fmt --check`, `cargo clippy
+--workspace --all-targets -- -D warnings`, and the wasm32
+`--no-default-features` check all clean. Also smoke-tested the real `bam`
+binary (`ingest --offline`): still reports 501 packages, unaffected by this
+round's schema/store-only changes.
+
+**Deviations for the next session to know about:**
+- `package.archive_hash` exists in the schema but is read/written only by
+  this round's own `store::blob_cache` and its raw `tables::` accessors —
+  not by the shared `Package` struct, `insert_package`, or `get_package`.
+  Whichever future task actually sets it on a real fetch (P5.4/P5.5's
+  unpacker backends, or a caching layer over `store::fetch`) will need either
+  these same raw accessors or a considered decision to fold the field into
+  `Package` at that point, updating all 17 existing call sites.
+- `evict_to_budget` recomputes `SELECT SUM(size)` from `blobs` on every loop
+  iteration rather than tracking a running total in memory — same
+  "simplest correct thing at current scale" call Round 25 made for
+  `rebuild_fts`'s per-package readme lookups; revisit if eviction over a
+  large `blobs` table is ever measured to be slow.
+
+---
+
 ## Next task
 
-**Phase 5** — next is **P5.2**, LRU eviction with pinning — see
+**Phase 5** — next is **P5.3**, `Unpacker` trait, registry, magic-byte
+detection — see
 [phase-5-cache-extraction.md](docs/plan/phase-5-cache-extraction.md).
 
 ---

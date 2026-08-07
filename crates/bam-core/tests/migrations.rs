@@ -47,13 +47,17 @@ fn applying_twice_is_a_noop() {
 #[test]
 fn db_at_version_n_only_runs_migrations_above_n() {
     let conn = Connection::open(":memory:").unwrap();
-    // Pretend migration 1 already ran, without ever running its DDL. If
+    // Run migration 1's DDL directly (bypassing `apply_migrations`, so it
+    // isn't counted), then stamp `user_version = 1` and let
+    // `apply_migrations` take over. Migration 6 needs `package` to already
+    // exist (it `ALTER TABLE`s it), which rules out the simpler "stamp 1,
+    // run nothing" version of this test used before migration 6 existed. If
     // `apply_migrations` ignored `user_version` and re-ran migration 1
-    // anyway, its tables would appear alongside migrations 2-5's — so
-    // instead prove migration 1 was skipped by checking only the later
-    // migrations' tables (`http_cache`, `fetch_queue`, `landing_readme`,
-    // migration 5's `package_fts` plus the shadow tables FTS5 creates for it)
-    // exist afterwards.
+    // anyway, its `CREATE TABLE package` would collide with the one already
+    // here and error — so a plain `unwrap()` below already proves migration
+    // 1 was skipped; the table-set assertion proves 2-6 all ran.
+    conn.execute_batch(include_str!("../migrations/0001_initial.sql"))
+        .unwrap();
     conn.pragma_update(None, "user_version", 1).unwrap();
 
     store::apply_migrations(&conn).unwrap();
@@ -63,14 +67,20 @@ fn db_at_version_n_only_runs_migrations_above_n() {
     assert_eq!(
         tables,
         vec![
+            "blobs".to_string(),
+            "enrichment".to_string(),
             "fetch_queue".to_string(),
             "http_cache".to_string(),
+            "landing_index_line".to_string(),
             "landing_readme".to_string(),
+            "package".to_string(),
             "package_fts".to_string(),
             "package_fts_config".to_string(),
             "package_fts_data".to_string(),
             "package_fts_docsize".to_string(),
             "package_fts_idx".to_string(),
+            "selection".to_string(),
+            "selection_member".to_string(),
         ]
     );
 }

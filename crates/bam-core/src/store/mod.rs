@@ -3,6 +3,7 @@ use std::time::Duration;
 
 use rusqlite::Connection;
 
+pub mod blob_cache;
 pub mod compile;
 pub mod fetch;
 pub mod fetch_queue;
