@@ -1,0 +1,52 @@
+Short:        ULTIMATE Amiga Address Book (XMas Edition)
+Author:       fosters@dvalley.demon.co.uk (Tom Bampton)
+Uploader:     fosters dvalley demon co uk (Tom Bampton)
+Type:         biz/dbase
+Version:      4.2 Release
+Architecture: m68k-amigaos
+
+MegaBook is a fast and very easy to use address book program. Dont let it's
+ease of use fool you, its powerfull enough to handle all your address book
+needs. 
+
+If you're looking for a fast, easy, address book ... look no further!
+
+ "As address books for the Amiga go, MegaBook is about the best there is."
+   ... Amiga Format, Nov. 1998
+
+MegaBook 4.2 is the start of some major updates in MegaBook. The Install
+directory has been completely reorganised, space wasted before has now been
+retaken. The Installer has been rewritten, and an Upgrade script is now
+available for previous users. The Extras system has also been rewritten,
+allowing a lot more flexibility then before ... you can now use multiple
+scripts for one Extra! We have also finally included the ASCII MBIO so you
+can export text files. There is a lot more new stuff in this release ...
+check it out, you will be pleasantly surprised!
+
+Happy Christmas to all our users!!
+
+Quick (slightly out of date) feature list:
+
+ o Multiple projects open at once
+ o Selectable fields
+ o Store notes on any record
+ o Country field now (finally) added
+ o Voice dial your fone
+ o Data dial your modem using your favourite terminal program
+ o Send EMails
+ o Send faxes
+ o Go to URLs
+ o Supports external loaders/savers so you can use almost any file format
+ o Loads and saves compressed files
+ o Full ARexx support
+ o ARexx Macro Recorder
+ o Free memory is your only size limit
+ o Print address labels (using an ARexx script)
+ o Optional MagicWB style toolbar
+ o Silly lottery and fortune cookies
+ o You can now change the font MegaBook uses.
+ o Doesnt use MUI (yes, thats a feature ;)..)
+ o 100% totally FREE
+
+There's much more then this too, download it and you'll be pleasantly
+surprised!

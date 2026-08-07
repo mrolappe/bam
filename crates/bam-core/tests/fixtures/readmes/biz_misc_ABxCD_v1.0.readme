@@ -1,0 +1,11 @@
+Short:        Application builder with database capabilities
+Author:       CLIVE@COLSTOTT.DEMON.CO.UK
+Uploader:     COL COLSTOTT DEMON CO UK
+Type:         biz/misc
+Architecture: m68k-amigaos
+Requirements: 1 Mb Amiga
+Distrubution: Distribute freely
+
+This program will search a database very quickly, it will also
+calculate moving averages for shares and it can handle graphics
+such as maps with the capability of zooming in and out.

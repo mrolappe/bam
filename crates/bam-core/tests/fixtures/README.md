@@ -16,3 +16,16 @@ Source: `https://ftp.fau.de/aminet/` — fetched 2026-08-06.
   - **header/preamble lines** — the leading `|` banner, 3 lines
 - `recent_sample.txt` — a real `RECENT`, committed in full (74 lines).
 - `tree_sample.txt` — a real `TREE`, committed in full (381 lines).
+- `readmes/` — 20 real readmes, fetched 2026-08-07, two from each of the ten
+  categories `index_sample.txt` covers (`biz/dbase` has three, `comm/dlg` and
+  `demo/aga` have one each, to land on 20). Named `{dir}_{file}.readme` with
+  `/` flattened to `_`. Mixed encodings on purpose (several are ISO-8859-1,
+  most are ASCII/UTF-8) — same charset-detection path as any other landed
+  text. The real readme URL is `{dir}/{stem}.readme`, where `stem` is the
+  package filename with its archive extension (`.lha`, `.tar.bz2`, ...)
+  stripped — confirmed against `ftp.fau.de/aminet/`'s own directory
+  listings. Round 22's `#[ignore]`d real-mirror test in
+  `store_fetch_worker.rs` guessed `{dir}/{file}.readme` (extension kept) —
+  wrong, per this round's own check; fixed in passing to strip the final
+  extension (still one 404 short of correct for `.tar.bz2` files, same
+  single-extension limitation `split_name_version`, P1.6, already has).

@@ -1,0 +1,52 @@
+Short:        powerpc AROS cross GCC for cygwin
+Author:       Markus Weiss
+Uploader:     weissms aros org (Markus Weiss)
+Type:         dev/cross
+Version:      4.2.2
+Architecture: ppc-aros
+
+Package based on gnu:
+gcc-4.2.2
+binutils-2.19
+
+Patches can be found in AROS (aros.org) source package:
+/contrib/gnu/gcc/
+/contrib/gnu/binutils/
+
+Patch authors: Fabio Alemagna, Michal Schulz, Markus Weiss, Robert Norris, Nic
+Andrews, Stanislaw Szymczyk, sf.net/projects/adtools
+
+Package built on cygwin.
+
+Package author: Markus Weiss
+Package version: 1
+
+How to install gcc/g++ cross compiler
+
+Prerequisites:
+Working installation of cygwin.
+
+How to setup gcc/g++:
+
+1. Open a cygwin bash, cd to the root directory: cd /.
+
+2. Extract the contents of this package: tar -xvjf <package-name>
+
+3. Add following lines to .bashrc in /home/<user-name>
+
+   if [ -d /usr/local/amiga/bin ] ; then
+     PATH=/usr/local/amiga/bin:"${PATH}"
+   fi
+
+4. Open cygwin bash, type:
+
+   <cpu>-aros-gcc --version
+   <cpu>-aros-gccg++ --version
+
+   If you received version information, the package is correctly installed.
+
+5. Have fun and develop various applications with C/C++
+
+
+
+Uploaded using: archives.aros-exec.org

@@ -1,0 +1,71 @@
+Short:        Accounts bank management, many options.
+Author:       David Gaussinel, Franck Roumy and St้phane Anquetil
+Uploader:     phb colombo telesys-innov fr
+Type:         biz/misc
+Architecture: m68k-amigaos
+
+Presentation
+ญญญญญญญญญญญญญญญ
+A domestic bank account software. Can  load  simultaneously  ten  accounts,
+automatically   sorting   the   operations,  possessing  a  notepad,  loads
+powerpacked files, makes graphical  stats,  printing  with  filter,  crypts
+accounts.
+
+Changes
+ญญญญญญญญญญ
+ o Added a Backup option creating a file .BAK  of  account  file  at  every
+save.
+
+ o  Changed  extension  of  filename   from   #?.CPT   to   #?.BANK   (more
+international).
+
+ o Repaired bug in numbers with comma causing errors calculs sometimes.
+
+ o Improved NTSC support. Display a correct screen now.
+
+ o Added when printing the bank and real balances.
+
+ o Added an Account document option saving an Ascii file of account with  a
+filter like in Print option.
+
+ o Using of ReqTools.library requesters through AmosPro  extension  written
+by Franck Roumy and developped for ABank.
+
+ o Added the possibility to crypt account with a  password  through  option
+Crypt.
+
+ o Modified the edit information account window.
+
+ o Repaired error, it's possible to begin with a negatif balance.
+
+ o Added a cycling gadget Validate and a Validate menu  in  stat  by  items
+window to choose between Real and Bank (only validate operation).
+
+ o Added a Save gadget in stat by items window to save the graphic  as  IFF
+file.
+
+ o When user quits, ABank ask if account must be saved.
+
+ o Added the possibility of scrolling in  page  with  keys  :  cursor  keys
+(line),  cursor  keys  and  SHIFT  (page) and cursor keys and ALT (start or
+end).
+
+ o Added a Palette option to choose prefered colors.
+
+ o Added a Add Items  option  to  merge  old  account's  items  to  current
+account.
+
+ o Added a Interface option to load a new AGUI module without AGUI Editor.
+
+ o Added a Prefs file to configurate ABank.
+
+ o ABank screen can flip like a real Intuition screen through  deep  gadget
+or Amiga-M.
+
+ o Improved AGIP to AGUI. Behind change of name, it's a real improvement of
+the code.
+
+ o Added an Installer script to simplify installation.
+
+ o Added bank logos of France, but Swiss and Deutsch too, and credit  cards
+logos.

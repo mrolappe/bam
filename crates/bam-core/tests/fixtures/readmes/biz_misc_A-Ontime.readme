@@ -1,0 +1,19 @@
+Short:        Corrected Alarmist_OnTimeEdit.rexx
+Author:       clemenz@zedat.fu-berlin.de
+Uploader:     clemenz zedat fu-berlin de
+Type:         biz/misc
+Architecture: generic
+
+There is a function called WaitForPort that my computer doesn`t supported.
+I`ve changed this line from:
+
+    WaitForPort ONTIME
+
+    to
+
+    DO WHILE ~show('p', "ONTIME")
+    END
+
+
+I think this should works on all Amigas with standard AREXX-installation.
+Please replace the old script in Everday:rexx-Directory.

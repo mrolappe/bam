@@ -1,0 +1,367 @@
+Short:        AddressAssist: the innovative Address-DB
+Uploader:     schneider igt baum ethz ch
+Type:         biz/dbase
+Version:      3.0 (29.1.1997)
+Requires:     MUI
+Architecture: m68k-amigaos
+
+************************************************************************
+
+
+                       A d d r e s s A s s i s t
+
+                 Release 3.0 v41.1 (January 29th 1997).
+
+      The address database program for the Amiga computer family.
+
+      Copyright (C) 1994-97 Quarz Development / Alex H. Schneider
+
+                             - Shareware -
+                  - DEMO, restricted to 15 records -
+
+
+************************************************************************
+(Deutsche Fassung, siehe weiter unten.)
+
+
+Introduction
+************
+
+ After  a  long  time,  I'm  glad  to  announce an all NEW and very MUCH
+ enhanced release of  'AddressAssist'  (AA).  AA  is  a  powerful,  full
+ featured address management program. It is definitively *not* YAAM (Yet
+ Another Address Manager), as it combines a lot of well  known  features
+ in  one  program  and  adds  some  new  posibilities  to  ease  Address
+ Management. Take a look at  the  most  important  program  features  as
+ listed below.
+
+ Give AA a chance. Address data from other AM may easily be used in AA!
+
+ Thank you and enjoy.
+
+
+ Alex H. Schneider
+
+
+Main features
+*************
+
+ *  16 field address database including 4 user definable text fields,  a
+    'group'-field  to  distinguish  up  to  10  record  groups  and  two
+    additional multi-line remark fields  with  unlimited  field  length.
+
+ *  Intuitive  user  interface  (MUI),  including  a  nice  image-button
+    toolbar.
+
+ *  Professional workspace, consisting of  a Database list  view  and  a 
+    Record form view.
+
+ *  Selections of records. Selected records may be viewed,  printed  and
+    exported  separately. Powerful filters (field string match and group
+    match filters) are provided.
+
+ *  Powerful printing: output Address Lists and (multi columned)  Labels
+    Sheets  with  flexible  text  style and format; including Header and
+    Footer lines on every page. Ability to Load and Save print-setup.
+
+ *  ARexx interface. All functions available through the  GUI  are  also
+    supported  in  ARexx. Freely configurable ARexx menu for easy access
+    to AREXX scripts.
+
+ *  Sports record links: link records to other records.
+
+ *  Easy  database  navigation  through  'QuickAccess' -buttons  on  the
+    toolbar or through the Listview.
+
+ *  Extensive use of MUI's Bubble-Help feature!
+
+ *  Record templates for simplified data input.
+
+ *  Powerful  database  sort feature including multiple sort indices and
+    directions.
+
+ *  Flexible Import/Export filters for  ASCII  files.  Freely  definable
+    file   format.   Exchange   data  with  all  famous  Wordprocessors,
+    Spreadsheets and Database applications on the Amiga  and  all  other
+    platforms. Ability to Load and Save of ASCII-Transfer setup.
+
+ *  Data exchange through AMIGA clipboard.
+
+ *  Special function for removing identical records.
+
+ *  Optional:  Direct  exchange  of address data with Casio SF series of
+    palmtop computers using a serial link cable (available separately at
+    the author).
+
+
+Language Support
+****************
+
+ Localized under WB2.1 and above. Built-in language is  English.  German
+ and  norsk  catalog  translations, as well as empty catalog description
+ files are provided. Italian and french translations are incomplete, the
+ translation  files  are  provided.  Documentation  is available only in
+ english. However, there is extensive Online-help  available  in  german
+ and  norsk in the form of Bubble-Help!
+
+ To spread AA all over the world, it would be nice to  support  as  many
+ languages  as  possible.  If  you are interested in providing a catalog
+ file translation and a short readme file for AddressAssist in your  own
+ language, please contact the author BEFORE starting to translate.
+
+
+Shareware: Restrictions in Demo release, Registration
+*****************************************************
+
+ This Demo release is restricted to 15 records only, which  is the  only
+ difference  to  the full version. This way, you are easily able to test
+ this piece of software. If you like it, then please register to get the
+ Key-File,  which  removes  the  restriction  in  this  and *all* future
+ versions of AA.
+
+ See  the  'Orderform.txt'  for  further  informations  on  registration
+ conditions and pricing.
+
+ By  registering,  you support the Author and encourage him in a further
+ development of the software. Thank you for supporting Shareware.
+
+
+Requirements
+************
+
+ AddressAssist requires  KS/WB v2+
+                         MUI v3+ (V11)
+                         textfield.gadget (© Mark Thomas)
+                         ScreenHeight >= 480pt
+
+
+AddressAssist on WWW
+********************
+
+ http://home.sol.no/bogivara/AA
+
+ Special  thanks go to Eirik Bognes for providing this excellent support
+ site.
+
+
+
+Contacting the author
+*********************
+
+ Please  feel  free  to  contact the author for questions, registration,
+ suggestions or bug reports etc.:
+
+ by mail:
+
+        Alex H. Schneider
+        Kruggasse 179
+        CH-5462 Siglistorf
+        Switzerland / Europe
+
+ or by email, internet (no registration):
+
+        schneider@igt.baum.ethz.ch (preferred)
+
+ or by phone (no registration):
+
+        ++41 56 243 18 13 (at home)
+        ++41 1 633 30 40 (at work)
+
+
+Installation
+************
+
+ Doubleclick  on  the  'Install'-Icon  to  start  Commodores   Installer
+ program,  then  answer  the  questions  according to your needs and the
+ program will be installed automatically on your system.
+
+
+Bug reports
+***********
+
+ Please use BugReport.txt in the documents drawer for bug reports.
+
+
+
+************************************************************************
+
+
+Einleitung
+**********
+
+ Nach einer langen Zeit freue ich mich, eine NEUE und  STARK  ERWEITERTE
+ Version  von  'AddressAssist'  (AA) vorzustellen. AA ist ein mächtiges,
+ voll ausgestattetes  Programm  für  das  professionelle  Verwalten  von
+ Adressen.  AA  ist mit Sicherheit nicht irgend eine Adressenverwaltung,
+ da AA viele, von anderen Programmen her bekannte, Möglichkeiten vereint
+ und  zusätzlich neue und interessante Features hinzufügt, und damit das
+ Verwalten  von  Adressen   erheblich   erleichtert.   Die   wichtigsten
+ Programmfeatures sind in der untenstehenden Liste angeführt.
+
+ Probieren  Sie  AA  aus!!!  Der  Umstieg lohnt sich und Sie können Ihre
+ alten Daten problemlos mit AA weiterverwenden.
+
+ Besten Dank und viel Vergnügen
+
+ Alex H. Schneider
+
+
+Die wichtigsten Programmfeatures
+********************************
+
+ *  Aus  16  Datenfeldern  bestehende  Adressendatenbank  mit   4   frei
+    definierbaren  Textfeldern, einem Gruppenfeld zur Unterscheidung von
+    bis zu 10 Adressengruppen sowie 2 mehrzeiligen Textfeldern. Diese  -
+    in  separaten Fenstern implementiert - können für längere Kommentare
+    oder Bemerkungen verwendet werden.
+
+ *  Übersichtliche und intuitive graphische Benutzeroberfläche (MUI) mit
+    einer graphischen Werkzeugleiste.
+
+ *  Professionelle  Arbeitsumgebung mit  einer  Listenansicht  für  alle
+    Datenbankeinträge  sowie  einer  Formularansicht   zur   Bearbeitung
+    einzelner Adressen.
+
+ *  Datensatzauswahl:  eine  bestimmte  Menge von Datensätzen kann einer
+    Auswahl hinzugefügt werden und separat  dargestellt,  gedruckt  oder
+    bearbeitet   werden.   Mächtige  Filterfunktionen  (Textmuster-  und
+    Gruppenfilter) stehen dabei zur Verfügung.
+
+ *  Mächtige  Druckerausgabe: Einfaches Drucken verschiedener Arten  von
+    Adressenlisten  und Etikettenblätter. Der Seitenaufbau mit Kopf- und
+    Fusszeilen,  die  Darstellung   der   Datensätze   (Feldreihenfolge,
+    Feldnamen)  sowie  der  Textstil und -format können einfach über die
+    GUI eingestellt werden. Druckeinstellungen können separat  gesichert
+    und wieder geladen werden.
+
+ *  Komplette  ARexx  Schnittstelle: Alle Programmfunktionen werden auch
+    unter ARexx unterstützt. Ein spezielles ARexx-Menu  vereinfacht  die
+    Handhabung der ARexx-Skripte.
+
+ *  Datensatzverknüpfungen:   Damit   können  einer  bestimmten  Adresse
+    andere, "verwandte" Einträge zugeordnet werden.
+
+ *  Datensatzvorlagen zur vereinfachten Eingabe von sich  wiederholenden
+    Adressdaten.
+
+ *  Ausgedehnte Hilfestellung on-line in der Form von Ballon-Hilfe.
+
+ *  Mehrfache    Datenbanksortierung    mit    wählbaren   Indizes   und
+    Sortierrichtungen.
+
+ *  Flexible  Import/Export  Filter   für   ASCII   Dateien   mit   frei
+    definierbarem Dateiformat (inkl. der Feldreihenfolge und Ausgabe der
+    Feldnamen).  Einstellungen  können  separat  gesichert  und   wieder
+    geladen werden.
+
+ *  Kopieren von Adressdaten in das AMIGA Clipboard.
+
+ *  Einfache Navigation durch die Datenbankeinträge in der Listenansicht
+    oder mit Hilfe der 'QuickAccess'-Knöpfe in der Werkzeugleiste.
+
+ *  Spezialfunktion   zum   Entfernen   von  redundanten   (identischen)
+    Datensätzen.
+
+ *  Optional: Direkter Datenaustausch (Lesen und Schreiben) mit Casio SF
+    Palmtop    Computern   mit   Hilfe   einer   optional   erhältlichen
+    Zusatzsoftware  und  einem  Seriellen  Kabel  (beides   beim   Autor
+    erhältlich).
+
+
+Unterstützte Sprachen
+*********************
+
+ Ab WB 2.1  unterstützt  AA  verschiedene  Sprachen.  Englisch  ist  als
+ eingebaute Sprache standart, zusätzlich sind Deutsch und Norwegisch als
+ Katalogübersetzungen  erhältlich.  Die  italienische  und  französische
+ Übersetzungsdateien  sind  z.Zt.  unvollständig  und  liegen  bei.  Die
+ Dokumentation liegt nur in englischer Sprache vor, allerdings  ist  die
+ in deutsch und norwegisch verfügbare Ballon-Hilfe sehr ausführlich!
+
+ Um AA in der ganzen Welt zu verbreiten, wäre es wünschenswert, so viele
+ Sprachen wie möglich zu unterstützen. Falls  Sie  Interesse  haben  und
+ eine  Übersetzung  der  Katalogdatei  in  Ihre  Landessprache vornehmen
+ möchten, so kontaktieren Sie bitte VORHER den Author.
+
+
+Shareware - Einschränkung der Demoversion und Registrierung
+***********************************************************
+
+ Die Demoversion ist auf 15 Datensätze  beschränkt,  ansonsten  gibt  es
+ keinen Unterschied zur Vollversion. Damit haben Sie die Möglichkeit, AA
+ auf Herz und Nieren zu Testen, bevor sie  die  Software  bestellen  und
+ bezahlen.
+ 
+ Für  eine  weitergehende Benutzung ist eine Registrierung unerlässlich.
+ Damit erhalten Sie eine  Schlüssel-Datei,  die  die  Einschränkung  der
+ Demoversion  entfernt  und  für  *alle*  zukünftigen  Programmversionen
+ gültig bleibt. Weitere Infos  zur  Registrierung  und  zu  den  Preisen
+ finden Sie in 'Bestellformular.txt'.
+
+ Durch  die  Registrierung  unterstützen Sie den Autor und ermutigen ihn
+ bei  der  Weiterentwicklung  der  Software.   Besten   Dank   für   die
+ Unterstützung des Shareware Konzeptes.
+
+
+
+Bug reports
+***********
+
+ Für allfällige Fehlermeldungen an den  Autor  benutzen  Sie  bitte  die
+ Datei 'BugReport.txt' als Vorlage.
+
+
+
+Systemvoraussetzungen
+*********************
+
+ AddressAssist benötigt  KS/WB v2+
+                         MUI v2.3+ (© Stefan Stuntz)
+                         textfield.gadget 3.0+ (© Mark Thomas)
+                         Bildschirmhöhe >= 480pt
+
+Installation
+************
+
+ Durch Doppelclick auf das 'Install'-Icon wird mit Hilfe von  Commodores
+ Installer-Programm die Installation einfach durchgeführt.
+
+
+
+AddressAssist im WWW
+********************
+
+ http://home.sol.no/bogivara/AA
+
+ Herzlichen Dank an Eirik Bognes für sein  exzellentes  Support-Site  im
+ Internet.
+
+
+Kontaktaufnahme mit dem Author
+******************************
+
+ Post:
+
+        Alex H. Schneider
+        Kruggasse 179
+        CH-5462 Siglistorf
+        Switzerland / Europe
+
+ E-mail, Internet:
+
+        schneider@igt.baum.ethz.ch (preferred)
+
+ Telefon:
+
+        ++41 56 243 18 13 (at home)
+        ++41 1 633 30 40 (at work)
+
+
+
+************************************************************************
+
+* <>>>>>>>>  Q U A R Z  Development / Alex H. Schneider  <<<<<<<<<<<<> *
+
+     If you fail to expect the unexpected, the system will crash!
+
+************************************************************************

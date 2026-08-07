@@ -1,0 +1,35 @@
+Short:        Nice address book program.  V3 OS required
+Author:       manningl@ee.port.ac.uk (Lawrence Manning)
+Uploader:     manningl ee port ac uk (Lawrence Manning)
+Type:         biz/dbase
+Architecture: m68k-amigaos
+
+Easy to use (I think so anyway) Address Book program for OS 3.0.  Very little
+system requirements, needs no external libraries and don't use MUI.
+
+Features:
+
+    *   Unlimited number of entries.  Memory permitting of course.
+
+    *   Field text length limited to 200 characters.  Should be enough
+        for everyones' needs.
+
+    *   Configurable printing support.
+
+    *   Font-sensitive GUI.
+
+    *   Tone-dial using Amiga's audio output.
+
+    *   Almost entirely controllable using ARexx scripts.  Example scripts
+        included in distribution.
+
+    *   Installs as a commodity.
+
+Plus some other things as well.
+
+NOTE:
+
+Executable file in this archive is the same as before, except for some minor
+differences.  Documentation contained some errors, I have fixed them.
+
+This will be the final release of AB that I will put on Aminet.  (Probably)

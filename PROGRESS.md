@@ -1576,9 +1576,69 @@ pre-existing real-mirror tests). `cargo fmt --check`, `cargo clippy
 
 ---
 
+## Round 24 — 2026-08-07 · Readme header parser (P4.5)
+
+**Done:**
+
+- **P4.5** — `crates/bam-core/src/ingest/readme.rs` (ungated — pure string
+  parsing, no `rusqlite`, confirmed by the wasm32 check): `ReadmeHeader`
+  (`short`/`author`/`uploader`/`type`/`version`/`requires`/`distribution`,
+  all `Option<String>`) and `parse_readme_header(text: &str) -> ReadmeHeader`,
+  infallible per the task's own leniency rule — nothing here can fail a file.
+  The header block is defined as the contiguous run from the start of the
+  text to the first blank line; within it, a line matching `Word[ Word]:` is
+  either a recognised field (captured) or an unrecognised one (`Architecture:`
+  and misspellings like `Distrubution:` in the real fixtures — silently
+  dropped, not merged into the previous field); any other line is a wrapped
+  continuation of whichever recognised field is currently open, joined with a
+  space. `README_HEADER_KIND = "readme_header"` and
+  `README_HEADER_PRODUCER_VERSION = 1` are exported constants for whichever
+  future task actually writes the `enrichment` row (P1.2's schema) — nothing
+  in this task's four test bullets calls for DB wiring, so none was added;
+  `ReadmeHeader` already derives `Serialize`/`Deserialize` for that caller to
+  use directly as the `payload`.
+
+  Twenty real readmes fetched from `ftp.fau.de/aminet/` (2026-08-07, listed in
+  `crates/bam-core/tests/fixtures/README.md`), two from each of the ten
+  categories `index_sample.txt` covers. Fetching them surfaced a real-world
+  correction: the readme URL is `{dir}/{stem}.readme` with the archive
+  extension **stripped** from the filename, not `{dir}/{file}.readme` with it
+  kept — Round 22's `#[ignore]`d real-mirror test in `store_fetch_worker.rs`
+  had guessed the latter and would have 404'd on every URL; fixed in passing
+  (still one 404 short of correct for `.tar.bz2` names, matching
+  `split_name_version`'s own pre-existing single-extension limitation from
+  P1.6 — not fixed there, out of scope for this round). Five tests in
+  `tests/ingest_readme.rs`: the twenty fixtures table-driven with each
+  fixture's recognised-field count pinned (computed by hand from each real
+  file, doubling as the "parsed without error" bullet — same table-satisfies-
+  two-bullets pattern as Round 8/10's precedent), a synthetic no-header-block
+  case, a synthetic blank-first-line case, a synthetic wrapped-value case, and
+  one more proving an unrecognised field line (`Architecture:`) doesn't get
+  merged into the preceding recognised field's value.
+
+138 tests total (5 new + 133 pre-existing; 136 run, 2 ignored — the two
+pre-existing real-mirror tests, unaffected by the readme-URL fix beyond the
+one line it touches). `cargo fmt --check`, `cargo clippy --workspace
+--all-targets -- -D warnings`, and the wasm32 `--no-default-features` check
+all clean.
+
+**Deviations for the next session to know about:**
+- The real readme-URL convention (`{dir}/{stem}.readme`, extension stripped)
+  wasn't previously verified against a real mirror — Round 22 flagged its own
+  guess as unconfirmed. Now confirmed and fixed in `store_fetch_worker.rs`'s
+  ignored test; not re-run this round (still manual-only).
+- No `enrichment` row is actually written yet — `parse_readme_header` is pure,
+  and the `README_HEADER_KIND`/`README_HEADER_PRODUCER_VERSION` constants are
+  there for whichever task wires readme fetch (P4.3) → parse (this round) →
+  store (`store::tables::insert_enrichment`, P1.2) together. That wiring
+  isn't named as its own task in the phase doc; watch for it being assumed
+  already done.
+
+---
+
 ## Next task
 
-P4.4 is done. Next is **P4.5** (readme header parser) — see
+P4.5 is done. Next is **P4.6** (FTS5 index over description and readme) — see
 [phase-4-harvest-search.md](docs/plan/phase-4-harvest-search.md).
 
 ---

@@ -1,0 +1,26 @@
+Short:        EDPWhoBan2.lha  Multiple who banners for CNET 3.05 ->
+Author:       Edward D. Peyton
+Uploader:     edp pen net
+Type:         comm/cnet
+Architecture: m68k-amigaos
+
+
+This program will allow users to have up to 10 who banners in a list,
+and choose from the list for their actual who banner! It also will
+colorize their banner, in a SAFE way, to make sure that NOTHING other
+than a color command ends up in the banner. My first version of this
+program sent the user into the editor to do thier list. That was fine,
+until they started putting kolorific and beeps in there. (aarrrgh!) hehe
+This Program NOW adds the color FOR them, there is nowhere in the program
+that the user can enter any MCI commands.
+
+They can edit, pick one manually. or pick one at random.
+
+
+Edward D. Peyton
+Atlantis BBS: (904) 479-3133 | 479-4080
+WebSite: http://www.pen.net/~atlantis
+email : edp@pen.net  Edward Peyton@1:3612/369.0
+snailmail:
+5100 N 9th Ave F-601
+Pensacola, FL 32504

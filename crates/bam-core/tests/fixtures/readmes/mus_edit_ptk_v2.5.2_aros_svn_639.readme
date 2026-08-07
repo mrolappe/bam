@@ -1,0 +1,16 @@
+Short:        Protrekkr
+Author:       Franck "hitchhikr" Charlet
+Uploader:     hhhikr gmail com (Franck "hitchhikr" Charlet)
+Type:         mus/edit
+Version:      2.5.2
+Architecture: i386-aros
+
+v2.5.2:
+
+- Slightly improved the smoothing of the reverb (making it sound a bit less metallic).
+- Added an option to tune the 2 303 units together.
+- Tracker crashed when using insert command on track 0.
+
+
+
+Uploaded using: archives.aros-exec.org
