@@ -6,6 +6,7 @@ pub mod http;
 pub mod ingest;
 pub mod progress;
 pub mod query;
+pub mod ratelimit;
 #[cfg(feature = "native")]
 pub mod store;
 

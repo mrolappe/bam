@@ -1366,10 +1366,74 @@ clippy --workspace --all-targets -- -D warnings`, and the wasm32
 
 ---
 
+## Round 21 — 2026-08-07 · Token-bucket rate limiter (P4.2)
+
+**Done:**
+
+- **P4.2** — `crates/bam-core/src/ratelimit.rs`, a new top-level module,
+  ungated like `cancel.rs`/`highlight.rs`: the algorithm itself is pure
+  computation over an injected `Clock` trait, and `SystemClock`'s
+  `Instant::now()` body only needs to *compile* under the wasm32 check, not
+  run correctly there (same reasoning `progress.rs` and the `http` trait
+  module already established for a real-vs-fake split). `TokenBucket<C:
+  Clock>` holds `Cell<f64>` tokens and a `Cell<Instant>` last-refill mark,
+  refilled lazily on every `try_acquire` call rather than by a background
+  timer — no ticking task to schedule, and identical results either way
+  since refill amount depends only on elapsed time since the last call.
+  `try_acquire` is deliberately the *only* operation and is non-blocking: it
+  returns `Ok(())` or `Err(Duration)` (how long until a token would be
+  available) and never sleeps itself, so a caller — real (P4.3, via
+  `tokio::time::sleep`) or test (advancing a fake clock) — owns the actual
+  waiting. `RateLimitConfig { rate: f64, burst: u32 }` derives `Deserialize`
+  with per-field `#[serde(default = ...)]` pointing at the documented
+  2.0/4 constants, so a `bam.toml` `[rate_limit]` section — and each field
+  within it — independently falls back rather than requiring an
+  all-or-nothing section; not wired into `bam-tui`'s config loader yet, since
+  no caller of the rate limiter exists before P4.3. `TokenBucket::new`
+  rejects `rate <= 0.0` with `NonPositiveRate`, checked once at construction
+  rather than on every `try_acquire`. `impl<C: Clock> Clock for &C` (a small,
+  necessary addition beyond the trait's minimal shape) lets a test share one
+  `FakeClock` between the clock-advancing driver and the bucket itself
+  without an `Rc`/`Arc` wrapper — `TokenBucket` owns its clock by value, and
+  a shared reference is a `Clock` too.
+
+  Four tests, inline `#[cfg(test)]` per this round's own algorithm-as-the-
+  artifact framing (matching P3.1/P3.2's precedent for a self-contained
+  module): a 100-request drain against `rate=2.0, burst=4` advances the fake
+  clock by the expected 48s (`(100-4)/2`) within a tight tolerance while wall
+  time stays under 200ms, proving no real sleep occurs; four immediate
+  `try_acquire`s succeed and a fifth returns a positive wait; an empty
+  `serde_json` object deserializes to exactly `RateLimitConfig::default()`
+  (`toml` isn't a `bam-core` dependency — every prior config type needing it,
+  `KeymapConfig`/`RuleConfig`, lives in `bam-tui`; deserializing from
+  `serde_json`'s `"{}"` proves the same per-field-default behavior a
+  `bam.toml` `[rate_limit]`-absent case would, without adding the dependency
+  a caller-less module doesn't yet need); `rate: 0.0` is rejected by
+  `TokenBucket::new` rather than accepted and left to hang at first use.
+
+124 tests total (4 new + 120 pre-existing — Round 20's own count was
+double-checked directly via `cargo test --workspace 2>&1 | grep -oE '[0-9]+
+passed' | awk '{s+=$1} END{print s}'` before adding to it, not assumed).
+`cargo fmt --check`, `cargo clippy --workspace --all-targets -- -D
+warnings`, and the wasm32 `--no-default-features` check all clean.
+
+**Deviations for the next session to know about:**
+- `RateLimitConfig` is not yet read from a real `bam.toml` — no caller
+  (P4.3's fetch worker) exists yet to need it wired into `bam-tui`'s
+  `resolve_config_path`/`load_keymap`-style loader. Revisit together when
+  P4.3 lands.
+- `try_acquire` is non-blocking by design, returning a wait `Duration`
+  rather than blocking or sleeping — P4.3's own task text ("the P4.2 rate
+  limiter over a single keep-alive connection") will need to decide how it
+  turns that into an actual `tokio::time::sleep`; not decided here since no
+  async caller exists yet.
+
+---
+
 ## Next task
 
-P4.1 is done. Next is **P4.2** (configurable token-bucket rate limiter) —
-see [phase-4-harvest-search.md](docs/plan/phase-4-harvest-search.md).
+P4.2 is done. Next is **P4.3** (background fetch worker) — see
+[phase-4-harvest-search.md](docs/plan/phase-4-harvest-search.md).
 
 ---
 
