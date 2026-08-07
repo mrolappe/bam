@@ -1781,10 +1781,68 @@ harvested politely and resumably, with visible/filtered entries prioritised.
 
 ---
 
+## Round 27 — 2026-08-07 · `BlobStore` trait + filesystem implementation (P5.1) — Phase 5 start
+
+**Done:**
+
+- **P5.1** — `crates/bam-core/src/blob/mod.rs`: `BlobHash` (a hex-encoded
+  BLAKE3 digest, `Serialize`/`Deserialize` since it'll later live in
+  `package.archive_hash`) and the `BlobStore` trait (`put`/`get`/`remove`),
+  ungated — following the `HttpClient` pattern (P1.9/Round 5) exactly:
+  plain trait in the crate root so a fake can be tested with no `native`
+  feature, real implementation behind it. `blake3` added as a new,
+  unconditional workspace dependency (pure computation, no OS dependency —
+  confirmed wasm32-safe by the `--no-default-features` check, same tier as
+  `chardetng`/`encoding_rs`).
+
+  `FsBlobStore` (`blob/fs_store.rs`, `native`-gated) stores files at
+  `<root>/aa/bb/<full-hash>`, two-level fanout. `put` streams the reader into
+  a temp file while hashing; the real hash — and hence the real path — isn't
+  known until the read completes, so an interrupted read can structurally
+  never leave anything under a real hash name, satisfying that test without
+  needing separate cleanup logic for the common case (the temp file itself is
+  still removed on error, for hygiene, not because a test requires it).
+  Identical content hashes identically, so a second `put` of the same bytes
+  finds `dest.exists()` and drops its own temp copy rather than re-writing —
+  dedup by construction, not a separate check. `get` reads the whole blob,
+  recomputes its hash, and compares before returning a `Cursor` over the
+  bytes — the after-the-fact verification §6 asks for, since Aminet
+  publishes no checksums to check against up front; marked with a `ponytail:`
+  comment (rehashes on every `get`, fine at Aminet archive sizes, revisit
+  with streaming verification if that stops being true). Four tests in the
+  new `tests/blob.rs`, matching the phase doc's four bullets exactly: a
+  `Read` that yields some bytes then errors, asserted to leave zero files
+  under the store root; identical bytes put twice yield the same hash and
+  exactly one file on disk (the "two package references" half of that
+  bullet is a `package`/`archive_hash` concern with no table wired to it
+  yet — see the deviation note); a blob tampered with directly on disk
+  fails `get` with `BlobError::Corrupted`; a hash that was never stored
+  fails `get` with `BlobError::NotFound` rather than panicking.
+
+151 tests total (4 new + 147 pre-existing; 149 run, 2 ignored — the two
+pre-existing real-mirror tests). `cargo fmt --check`, `cargo clippy
+--workspace --all-targets -- -D warnings`, and the wasm32
+`--no-default-features` check all clean.
+
+**Deviations for the next session to know about:**
+- No `blobs` DB table or `package.archive_hash` column yet, despite §6
+  describing both. P5.1's own hand-over list ("the trait, the fanout scheme,
+  invariant I1's feature gating, the four tests") names no table, and none of
+  the four tests need one — `BlobStore` alone is filesystem-only. P5.2's LRU
+  eviction is the first task that actually needs `blobs(hash, size,
+  last_used, pinned)` to operate on, so that migration is left for it rather
+  than added speculatively here.
+- P5.1's "storing identical bytes twice yields one blob with **two package
+  references**" bullet is only half-tested: the blob-level half (one file,
+  same hash) is; the package-level half needs `package.archive_hash`, which
+  doesn't exist yet (see above). Flagged per the same convention as prior
+  rounds' doc/reality gaps.
+
+---
+
 ## Next task
 
-Phase 4 is done. Next is **Phase 5** — blob cache, unpacker registry, `.uaem`
-— see
+**Phase 5** — next is **P5.2**, LRU eviction with pinning — see
 [phase-5-cache-extraction.md](docs/plan/phase-5-cache-extraction.md).
 
 ---
