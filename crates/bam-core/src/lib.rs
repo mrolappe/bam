@@ -11,6 +11,7 @@ pub mod ratelimit;
 pub mod robots;
 #[cfg(feature = "native")]
 pub mod store;
+pub mod unpack;
 
 pub fn version() -> &'static str {
     env!("CARGO_PKG_VERSION")

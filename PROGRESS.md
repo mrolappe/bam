@@ -219,10 +219,66 @@ round's schema/store-only changes.
 
 ---
 
+## Round 29 — 2026-08-07 · `Unpacker` trait, registry, magic-byte detection (P5.3)
+
+**Done:**
+
+- **P5.3** — `crates/bam-core/src/unpack/mod.rs`, new module, ungated per I1
+  (mirrors `blob`'s shape: trait plus plain types compile to wasm32, only a
+  real backend would be `native`-gated — P5.3 adds no backend, that's
+  P5.4/P5.5). `Unpacker` trait (`id`/`handles`/`probe`/`unpack`) matches the
+  phase doc's signature exactly. `UnpackerRegistry` follows P2.2's
+  `LanguageRegistry` shape (`Vec<Box<dyn Unpacker>>`, not `dyn`-map) but its
+  `select(format, override_id)` differs from `LanguageRegistry::get`'s plain
+  id-lookup-with-default: it has two axes to satisfy (does an unpacker claim
+  this *format*, and does it *probe* available) where the query-language
+  registry only had one (id match), so selection is config override first —
+  looked up by id, still required to `handle()` the format and `probe()`
+  available, erroring rather than silently falling through if not — then the
+  first registered unpacker that both claims the format and probes
+  available.
+
+  `detect_format` reads magic bytes only, never the filename: LZX archives
+  open with the literal 4-byte signature `LZX\0`; LHA/LZH archives have no
+  fixed leading signature (bytes 0–1 are header size and checksum) but always
+  spell their method id as `-lh?-`/`-lz?-` at offset 2, which is what's
+  checked. An unrecognized format's error carries the first 8 leading bytes
+  for diagnosis rather than just saying "unknown".
+
+  Six tests in the new `tests/unpack.rs` (the phase doc names five; a real
+  magic-byte LHA-detects-as-LHA case was split out from the "lies about its
+  extension" case as its own test, since the plan's "file named `.lha`
+  routes to LZX" bullet doesn't by itself prove plain LHA bytes are also read
+  correctly): a file with an LHA-shaped name but LZX magic bytes detects as
+  LZX; genuine `-lh5-` magic bytes detect as LHA; unrecognized bytes error
+  with the leading 8 bytes attached; a config override selects a specific
+  registered unpacker over another that would otherwise win by list order;
+  an unavailable unpacker (`probe` returning `Unavailable`) is skipped in
+  favour of a working one rather than attempted; no available unpacker for a
+  format produces an error whose text names both the format and an install
+  hint. All six use fake in-test `Unpacker` impls returning `Ok(vec![])` from
+  `unpack` — P5.3 is trait-plus-registry only, no real extraction is wired up
+  or exercised yet (that's P5.4's `unar` backend and P5.5's `zip` backend).
+
+160 tests total (6 new + 154 pre-existing, summed directly via `cargo test
+--workspace 2>&1 | grep "test result: ok" | ...`). `cargo fmt --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`, and the wasm32
+`--no-default-features` check all clean. Also smoke-tested the real `bam`
+binary (`ingest --offline`): still reports 501 packages, unaffected by this
+round's new, self-contained module.
+
+**Deviations for the next session to know about:**
+- None. This round's scope matched the phase doc exactly — no table, no
+  backend, no filesystem access; `ArchiveFormat` currently only has `Lha`
+  and `Lzx` variants since those are the only two formats named anywhere in
+  the plan (§4/P5.4/P5.5); a future zip-fixture round adds `Zip` when P5.5
+  needs it.
+
+---
+
 ## Next task
 
-**Phase 5** — next is **P5.3**, `Unpacker` trait, registry, magic-byte
-detection — see
+**Phase 5** — next is **P5.4**, `unar` backend (out of process) — see
 [phase-5-cache-extraction.md](docs/plan/phase-5-cache-extraction.md).
 
 ---
