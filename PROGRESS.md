@@ -92,20 +92,44 @@ preserved as `.uaem` sidecars and file inventories captured as enrichment —
 
 ---
 
+## Round 35 — 2026-08-08 · Phase 7: `LlmProvider` trait + OpenAI-compatible implementation (P7.1)
+
+`crates/bam-core/src/llm/`: `LlmProvider` trait (`complete`, `embed`,
+`capabilities`) plus `OpenAiCompatibleProvider`, one implementation for
+llama.cpp, Ollama, and cloud endpoints — they differ only in
+`OpenAiCompatibleConfig` (`base_url`, `model`, `api_key`,
+`grammar: GrammarSupport`). Built on P1.9's `HttpClient`, extended with a
+`post` method (default-erroring, so the four existing GET-only test fakes
+needed no changes) and a new `HttpPostRequest` type; `ReqwestClient` gained
+a real `post`. `LlmError::ConnectionFailed { url }` distinguishes a
+transport-level failure (`HttpError::Request`, server not listening) from a
+bad HTTP status, and names the configured URL in its message. Embeddings
+are reordered by the response's `index` field before returning, so a
+provider that replies out of order still yields vectors in input order.
+5 tests added in `crates/bam-core/tests/llm.rs` (4 offline + 1 `#[ignore]`d
+real-server test), all passing; `cargo clippy --workspace --all-targets`
+clean; `cargo build -p bam-core --no-default-features --target
+wasm32-unknown-unknown` still compiles (I1 holds — the trait and provider
+are plain code, no `native` gate needed since they go through `HttpClient`
+generically rather than `reqwest` directly).
+
 ## Next task
 
-**Phase 7 — LLM layer** ([phase-7-llm.md](docs/plan/phase-7-llm.md)),
-user's explicit choice (2026-08-08) over the table's default order (Phase
-6 next), since phases 6–9 are additive and resequenceable (§15). Start with
-**P7.1**, the `LlmProvider` trait plus an OpenAI-compatible implementation
-covering llama.cpp/Ollama/cloud endpoints, differing only in
-`capabilities()` — local **llama.cpp** is the documented default (decided
-2026-08-06, see "Resolved open questions" below).
+**P7.2 — grammar generation per language** ([phase-7-llm.md](docs/plan/phase-7-llm.md)):
+generate GBNF (llama.cpp) and JSON Schema (cloud) from
+`QueryLanguage::grammar()` (I2), not from a hardcoded DSL. Marked **O**
+(Opus) — the hard part is an equivalence property test proving both
+artifacts accept the same language, not just matching the fifteen examples
+in `docs/lang-bam-dsl.md`.
 
 What Phase 7 can already build on, so a fresh session doesn't have to
 re-derive it:
-- **P1.9's `HttpClient` trait** — P7.1 explicitly reuses it so every test
-  but the one `#[ignore]`d real-server test runs offline.
+- **P7.1's `LlmProvider`/`OpenAiCompatibleProvider`** (this round) is what
+  P7.3's query-generation prompt and P7.5's summariser call through.
+  `CompletionRequest.grammar` already threads a GBNF string to the request
+  body when `capabilities().grammar == GrammarSupport::Gbnf`; P7.2 is what
+  produces that string (and the JSON Schema counterpart) instead of a
+  caller hand-writing one.
 - **P2.1's `Similar` IR node** was reserved but rejected by the compiler
   since Round 8/9 (P2.5) specifically for P7.4 to unreserve.
 - **P2.2's `QueryLanguage` trait** (`grammar()`) is what P7.2 derives GBNF
@@ -113,10 +137,10 @@ re-derive it:
   hand-maintained separately (§10).
 - **P2.7's selection API** (I7) is what P7.5 targets a summarisation run at
   a selection rather than the whole table.
-- **The `enrichment` table plus `upsert_enrichment`** (added this session
-  in Round 34/P5.8) is exactly the mechanism P7.5's `kind = 'llm_summary'`
-  producer needs — readme (P4.5's `readme_header`) and inventory (P5.8's
-  `inventory`) are its two inputs.
+- **The `enrichment` table plus `upsert_enrichment`** (added Round 34/P5.8)
+  is exactly the mechanism P7.5's `kind = 'llm_summary'` producer needs —
+  readme (P4.5's `readme_header`) and inventory (P5.8's `inventory`) are
+  its two inputs.
 - Not yet in the workspace: `sqlite-vec`, needed for P7.4's embedding
   storage — add it then, not speculatively now.
 
