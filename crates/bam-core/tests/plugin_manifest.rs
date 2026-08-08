@@ -1,4 +1,6 @@
-use bam_core::plugin::{ContentAnalyzerInput, ManifestError, PluginManifest, contract_schema};
+use bam_core::plugin::{
+    ContentAnalyzerInput, ManifestError, PluginManifest, UnpackRequest, contract_schema,
+};
 
 const VALID: &str = r#"
 name = "protracker-analyzer"
@@ -81,4 +83,29 @@ fn contract_schema_matches_the_actual_input_type() {
 #[test]
 fn unknown_extension_point_has_no_schema() {
     assert!(contract_schema("nonexistent").is_none());
+}
+
+#[test]
+fn unpacker_contract_schema_matches_the_actual_input_type() {
+    let schema = contract_schema("unpacker").expect("unpacker is known (P8.2)");
+    let required = schema["required"]
+        .as_array()
+        .expect("schema has a required list")
+        .iter()
+        .map(|v| v.as_str().unwrap())
+        .collect::<Vec<_>>();
+
+    let sample = UnpackRequest {
+        bytes_b64: "".into(),
+    };
+    let value = serde_json::to_value(&sample).unwrap();
+    let actual_fields = value.as_object().unwrap().keys().collect::<Vec<_>>();
+
+    for field in &required {
+        assert!(
+            actual_fields.iter().any(|f| f.as_str() == *field),
+            "schema requires `{field}` but the serialized type doesn't carry it"
+        );
+    }
+    assert_eq!(required.len(), actual_fields.len());
 }

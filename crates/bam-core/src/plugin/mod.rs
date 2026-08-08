@@ -71,6 +71,36 @@ pub struct ContentAnalyzerInput {
     pub hint: String,
 }
 
+/// P8.2's extension point: an archive's bytes, passed to an `unpacker`
+/// plugin's `unpack` export.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct UnpackRequest {
+    pub bytes_b64: String,
+}
+
+/// One extracted file, as returned by an `unpacker` plugin. The host writes
+/// `bytes_b64` to `dest` itself — a plugin proposes paths, it never touches
+/// the filesystem — so the same path-traversal check P5.4/P5.5 apply here
+/// too (I4: a plugin is less trusted than in-tree code, not more).
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct UnpackedFile {
+    pub path: String,
+    pub bytes_b64: String,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct UnpackResponse {
+    pub files: Vec<UnpackedFile>,
+}
+
+/// Response from an `unpacker` plugin's `probe` export.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct UnpackProbeResponse {
+    pub available: bool,
+    #[serde(default)]
+    pub reason: Option<String>,
+}
+
 /// Returns the JSON Schema for `extension_point`'s input contract, `None`
 /// for a point the host doesn't recognise. Generated straight from the
 /// Rust type via `schemars`, so the published schema cannot drift from what
@@ -80,6 +110,14 @@ pub fn contract_schema(extension_point: &str) -> Option<Value> {
         "content_analyzer" => Some(
             serde_json::to_value(schema_for!(ContentAnalyzerInput)).expect("schema serializes"),
         ),
+        "unpacker" => {
+            Some(serde_json::to_value(schema_for!(UnpackRequest)).expect("schema serializes"))
+        }
         _ => None,
     }
 }
+
+#[cfg(feature = "native")]
+mod wasm;
+#[cfg(feature = "native")]
+pub use wasm::{PluginLoadError, WasmUnpacker};

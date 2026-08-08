@@ -174,6 +174,40 @@ that proves or disproves invariant I4 for a plugin backend.
 
 ---
 
+## Round 52 — 2026-08-08 · Phase 8: extism host and registry integration (P8.2)
+
+`WasmUnpacker<S: BlobStore>` (`bam_core::plugin::wasm`, native-only):
+loads `manifest.toml` + `plugin.wasm` from a directory and implements the
+plain `Unpacker` trait (P5.3) by calling an `extism::Plugin`'s `probe` and
+`unpack` exports with JSON — `UnpackRequest`/`UnpackResponse`/
+`UnpackProbeResponse` added to `bam_core::plugin` as P8.1's `contract_schema`
+gains an `"unpacker"` case alongside `"content_analyzer"`. The plugin
+proposes file paths and bytes; the host writes them, rejecting `..`/absolute
+paths itself, same trust posture as P5.4/P5.5 — a plugin is less trusted
+than in-tree code, not more. `claims` reuses P8.1's glob matcher against a
+format-name pattern (`*.zip` etc.) rather than adding a second matching
+mechanism.
+
+I4 confirmed: `registry.register(Box::new(WasmUnpacker::load(dir, store)?))`
+against the unchanged `UnpackerRegistry` — zero diff in `unpack/`, `launch/`,
+or any call site (checked directly, not just tested). 5 tests added (253
+total): register-and-select through normal selection logic, a host↔plugin
+JSON+bytes round-trip, native-vs-WASM resolving purely by registration order
+in both directions, idempotent double-load, plus an `unpacker` contract
+schema round-trip test mirroring P8.1's `content_analyzer` one.
+
+Test fixture: `tests/fixtures/plugins/echo-unpacker/` — a real
+`extism-pdk` WASM plugin (source kept alongside for provenance under
+`src-provenance/`, not part of the Cargo workspace) that reports available
+and echoes its input bytes back as one file, enough to prove the mechanism
+without needing real archive parsing inside WASM — that's P8.4.
+
+**Next:** P8.3, the `content_analyzer` extension point — wiring `enrichment`
+rows to a plugin's classification output, with per-plugin producer
+versioning so a plugin upgrade reprocesses only its own rows.
+
+---
+
 ## Decisions carried forward
 
 The eight architectural invariants are stated in full in
