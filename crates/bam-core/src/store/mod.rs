@@ -10,6 +10,7 @@ pub mod fetch_queue;
 pub mod fetch_worker;
 pub mod fts;
 pub mod ingest;
+pub mod inventory;
 pub mod land;
 mod migrations;
 pub mod normalize;

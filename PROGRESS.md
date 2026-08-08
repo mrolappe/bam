@@ -526,10 +526,103 @@ binary (`ingest --offline`): still reports 501 packages.
 
 ---
 
+## Round 34 — 2026-08-07 · Archive inventory enrichment (P5.8) — Phase 5 exit
+
+**Done:**
+
+- **P5.8** — split across two modules to keep invariant I1 (`rusqlite`
+  confined to `store::`) intact, since the phase doc's "composes P5.3 with
+  the enrichment table" spans both sides of that boundary:
+
+  `unpack/inventory.rs` (native-gated, no DB access): `extract_inventory`
+  extracts a blob via a `&UnpackerRegistry` into a private scratch
+  directory — the same counter+PID scratch-dir scheme as `unar.rs` — and
+  always removes it afterwards, success or error, before propagating any
+  extraction error. Reuses `Unpacker::unpack`'s own returned
+  `Vec<ExtractedFile>` (path+size) rather than re-walking `dest`, since the
+  registry already produced exactly that list; the one thing missing was a
+  "detected type", added as `detect_kind`, a plain extension→category map
+  (`text`/`image`/`audio`/`icon`/`system`/`other`/`unknown`) over the
+  *extracted* file's own name — deliberately not a magic-byte sniffer,
+  since P5.3's "Aminet lies about extensions" problem is specifically about
+  the outer archive's filename, not the contents' own names once unpacked.
+
+  `store/inventory.rs` (native-gated, under `store::` per I1):
+  `enrich_inventory` is the actual entry point — checks for an existing
+  `kind = "inventory"` enrichment row first (`producer_version ==
+  INVENTORY_PRODUCER_VERSION` → `InventoryOutcome::UpToDate`, no extraction
+  attempted at all, not just a discarded one), otherwise calls
+  `extract_inventory` and serializes the result with `serde_json` into a
+  new `enrichment` row. Storing that row needed a genuine addition to
+  `tables.rs`: the existing `insert_enrichment` is a plain `INSERT`, which
+  collides with `enrichment`'s `PRIMARY KEY (package_id, kind)` on a
+  reprocess — added `upsert_enrichment` (`INSERT ... ON CONFLICT DO
+  UPDATE`, the same idiom P5.2's `record_blob` already uses for `blobs`)
+  rather than widening `insert_enrichment` itself, since every existing
+  caller's insert-only contract (erroring on a genuine duplicate) is still
+  correct for them.
+
+  `produced_at` reuses `bam_core::now_rfc3339()` (built in Round 1 for
+  `fetched_at`) rather than adding a clock dependency.
+
+  Four tests in the new `tests/unpack_inventory.rs`, matching the phase
+  doc's four bullets exactly, all built around an in-test `ZipUnpacker` (no
+  external `unar` binary needed, unlike P5.4's fixtures) plus the same
+  `seed()` package/blob helper `tests/store_blob_cache.rs` already uses: a
+  two-file zip's inventory round-trips through the enrichment payload with
+  matching paths, sizes, and a `text` kind for `.txt`; a malformed-zip blob
+  errors *and* leaves no `bam-inventory-scratch-*` directory under the
+  system temp dir (a before/after glob-diff, guarded by a
+  `static Mutex` all four tests take — the four tests in this file all
+  create and remove their own scratch dirs under that shared prefix, and
+  running in parallel threads without the lock made the glob-diff
+  genuinely flaky, caught by a real intermittent failure during this
+  round, not reasoned out in advance); the enrichment row survives
+  `evict_to_budget(..., 0)` on the same blob, re-asserting P5.2's
+  invariant from the consumer side per the phase doc's own wording; a row
+  manually seeded at `producer_version = 0` is reprocessed to `1`
+  (`Written`), and calling again is a no-op (`UpToDate`).
+
+**Phase 5 exit reached.** Archives are cached by content hash (P5.1–P5.2),
+extracted through a registry with two working backends (P5.3–P5.5), with
+Amiga attributes preserved as `.uaem` sidecars (P5.6–P5.7) and file
+inventories captured as enrichment (P5.8) — §15's "hard core" is complete
+per the phase doc's own closing line.
+
+185 tests total (4 new + 181 pre-existing, summed directly via `cargo test
+--workspace 2>&1 | grep "test result: ok" | ...`). `cargo fmt --check`,
+`cargo clippy --workspace --all-targets -- -D warnings`, and the wasm32
+`--no-default-features` check all clean (`unpack/inventory.rs` has no DB
+dependency and would compile under wasm32 but for its scratch-dir `fs`
+calls, so it stays native-gated like `unar.rs`/`zip_backend.rs`). Also
+smoke-tested the real `bam` binary (`ingest --offline`): still reports 501
+packages.
+
+**Deviations for the next session to know about:**
+- Round 33's hand-over note speculated P5.8 would be "the first task
+  positioned to actually invoke [`write_sidecar`]". The actual P5.8 phase
+  doc entry names only inventory extraction and the enrichment table —
+  no `.uaem` sidecar involvement — so that speculation didn't hold;
+  `write_sidecar` remains uncalled from anywhere. Nothing in Phase 5's own
+  task list schedules its wiring; it would need a real extraction pipeline
+  (real destination directory, not a discarded scratch one) as a caller,
+  which no task before Phase 6 currently owns.
+- `enrich_inventory`/`extract_inventory` are not yet called from any
+  ingest or fetch pipeline — P5.8 was scoped, like P5.1/P5.3/P5.6/P5.7
+  before it, as the enrichment mechanism itself, not its trigger. Whichever
+  future phase adds a "process this archive" pipeline step is the first
+  real caller.
+
+---
+
 ## Next task
 
-**Phase 5** — next is **P5.8**, archive inventory enrichment — see
-[phase-5-cache-extraction.md](docs/plan/phase-5-cache-extraction.md).
+**Phase 5 exit reached** — the plan's own "reassess sequencing here" point
+(§15: "Phases 0–5 are the hard core. 6–9 are additive and can be
+resequenced."). Phase 6 is next in the table's default order — launcher
+registry, FS-UAE ([phase-6-launchers.md](docs/plan/phase-6-launchers.md)) —
+but nothing forces that order over 7/8/9; worth confirming with the user
+before starting rather than assuming.
 
 ---
 

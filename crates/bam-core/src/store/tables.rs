@@ -139,6 +139,28 @@ pub fn insert_enrichment(conn: &Connection, row: &Enrichment) -> Result<()> {
     Ok(())
 }
 
+/// Like [`insert_enrichment`], but replaces an existing `(package_id, kind)`
+/// row instead of erroring — P5.8's "bumping `producer_version` reprocesses"
+/// needs this; a plain `INSERT` would collide with the table's primary key.
+pub fn upsert_enrichment(conn: &Connection, row: &Enrichment) -> Result<()> {
+    conn.execute(
+        "INSERT INTO enrichment (package_id, kind, producer_version, produced_at, payload)
+         VALUES (?1, ?2, ?3, ?4, ?5)
+         ON CONFLICT(package_id, kind) DO UPDATE SET
+           producer_version = excluded.producer_version,
+           produced_at = excluded.produced_at,
+           payload = excluded.payload",
+        params![
+            row.package_id,
+            row.kind,
+            row.producer_version,
+            row.produced_at,
+            row.payload,
+        ],
+    )?;
+    Ok(())
+}
+
 pub fn get_enrichment(conn: &Connection, package_id: i64, kind: &str) -> Result<Enrichment> {
     conn.query_row(
         "SELECT package_id, kind, producer_version, produced_at, payload

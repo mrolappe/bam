@@ -158,3 +158,10 @@ pub use unar::UnarUnpacker;
 mod zip_backend;
 #[cfg(feature = "native")]
 pub use zip_backend::ZipUnpacker;
+
+#[cfg(feature = "native")]
+mod inventory;
+#[cfg(feature = "native")]
+pub use inventory::{
+    INVENTORY_KIND, INVENTORY_PRODUCER_VERSION, Inventory, InventoryEntry, extract_inventory,
+};
