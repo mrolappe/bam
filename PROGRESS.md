@@ -202,6 +202,47 @@ the same `frontend/` build `bam-server` now serves over HTTP.
 
 ---
 
+## Round 46 — 2026-08-08 · Phase 9: Tauri shell (P9.3)
+
+A new `bam-tauri` crate: a thin Tauri v2 host with no UI of its own —
+`tauri.conf.json`'s `frontendDist` points straight at `../../frontend/dist`,
+the same build `npm run build` produces, so there is exactly one `frontend/`
+package rather than a bundled fork. `#[tauri::command]` handlers mirror
+`TauriClient.ts`'s `invoke` calls one-for-one (P9.1), each adapting a
+request straight onto `bam_core::api`. Unlike `bam-server`, a desktop app
+has exactly one user, so there's no cookie-keyed session map: one
+`SessionHandle` is spawned at startup and shared by every command —
+`SessionHandle::spawn` (P9.2's per-session actor thread, keeping
+`bam-core`'s non-`Sync` `Session` off axum's/Tauri's async runtime) is now
+`pub` in `bam-server::state` so this crate reuses it rather than
+reimplementing the same actor-thread machinery. `start_ingest` spawns a
+relay task forwarding the session's progress broadcast to a
+`progress:{operation}` Tauri event until `Finished`, the exact event name
+`TauriClient::progress` already listens for.
+
+All three of P9.3's tests hold: the app builds and launches on macOS,
+confirmed by a manual run (opens and stays open — no panic, no error
+output) plus `cargo build -p bam-tauri`; the shared transport contract
+suite from P9.1 (`contract.test.ts`) already runs `TauriClient` against a
+real command surface (Round 44 wrote it against both transports up front);
+and `tauri.conf.json`'s build config is the no-fork evidence for the third.
+Linux launch itself is unverified locally (no Linux machine in this
+session) but now builds in CI — added `libwebkit2gtk-4.1-dev`,
+`libgtk-3-dev`, `libayatana-appindicator3-dev`, `librsvg2-dev` to the
+`ubuntu-latest` CI step so `cargo test --workspace`/`clippy --workspace`
+(now covering `bam-tauri` as a workspace member) actually links there
+instead of failing on missing system libs. 235 Rust tests (unchanged — no
+new Rust test code; the acceptance surface here is build/launch and the
+already-existing frontend contract suite), CI gained the Linux Tauri
+system deps, no other workflow changes.
+
+**Next:** P9.4, package list and detail views — the first real Vue
+components (virtualized list, detail pane, query input with P3.5-style
+inline error display) landing in `frontend/components/`, consumed by both
+`bam-server` and `bam-tauri` at once.
+
+---
+
 ## Decisions carried forward
 
 The eight architectural invariants are stated in full in

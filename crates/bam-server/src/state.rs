@@ -57,7 +57,11 @@ pub struct SessionHandle {
 }
 
 impl SessionHandle {
-    fn spawn(db_path: PathBuf) -> Self {
+    /// Spawns a fresh session actor thread. Public so `bam-tauri` (P9.3) can
+    /// create a single handle directly — a desktop app has exactly one user,
+    /// so it skips `AppState`'s cookie-keyed session map entirely rather
+    /// than reimplementing this actor-thread machinery a second time.
+    pub fn spawn(db_path: PathBuf) -> Self {
         let (tx, rx) = mpsc::unbounded_channel();
         let active: ActiveIngest = Arc::new(StdMutex::new(None));
         let active_for_actor = active.clone();
