@@ -138,10 +138,12 @@ phase doc's four P6.4 tests target the core batch behavior only.
 
 ## Next task
 
-Phases 8 and 9 remain open and unscheduled behind Phase 6 (additive,
-resequenceable per `IMPLEMENTATION_PLAN.md`'s phase table) — Phase 8 is the
-extism WASM plugin host (5 tasks), Phase 9 is the Vue/`bam-server`/Tauri
-frontends (7 tasks).
+**Phase 9** (Vue/`bam-server`/Tauri frontends, 7 tasks) is next, chosen over
+Phase 8 (extism WASM plugin host, 5 tasks) — both are additive and
+resequenceable per `IMPLEMENTATION_PLAN.md`'s phase table, neither blocks
+the other, this is a scheduling choice, not a dependency. See
+[phase-9-frontends.md](docs/plan/phase-9-frontends.md) for its task list
+before starting. Phase 8 remains open and unscheduled behind it.
 
 ---
 
