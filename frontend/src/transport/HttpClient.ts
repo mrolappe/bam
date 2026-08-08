@@ -1,7 +1,7 @@
 // `fetch` + SSE transport for the browser/`bam-server` host (P9.2). This is
 // the only file allowed to call `fetch` for API traffic — components go
 // through `BamClient`, never this class directly.
-import type { BamClient } from "./BamClient";
+import { BamApiError, type BamClient } from "./BamClient";
 import type {
   SearchPackagesRequest,
   SearchPackagesResponse,
@@ -58,7 +58,11 @@ export class HttpClient implements BamClient {
       body: JSON.stringify(req),
     });
     if (!res.ok) {
-      throw new Error(`${path} failed: ${res.status}`);
+      const body = (await res.json().catch(() => null)) as {
+        error?: string;
+        span?: [number, number] | null;
+      } | null;
+      throw new BamApiError(body?.error ?? `${path} failed: ${res.status}`, body?.span);
     }
     return (await res.json()) as Res;
   }
@@ -108,6 +112,12 @@ export class HttpClient implements BamClient {
       "/api/operation-status",
       { operation },
     );
+  }
+  async toggle(packageId: number) {
+    const res = await this.post<{ package_id: number }, { marked: boolean }>("/api/toggle", {
+      package_id: packageId,
+    });
+    return res.marked;
   }
 
   async *progress(operation: OperationId, signal?: AbortSignal): AsyncIterable<ProgressEvent> {

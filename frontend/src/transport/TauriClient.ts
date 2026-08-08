@@ -3,7 +3,7 @@
 // class directly.
 import { invoke as tauriInvoke } from "@tauri-apps/api/core";
 import { listen as tauriListen } from "@tauri-apps/api/event";
-import type { BamClient } from "./BamClient";
+import { BamApiError, type BamClient } from "./BamClient";
 import type {
   SearchPackagesRequest,
   SearchPackagesResponse,
@@ -48,44 +48,63 @@ export class TauriClient implements BamClient {
     this.listen = opts.listen ?? (tauriListen as Listen);
   }
 
+  /** Runs a Tauri command, rethrowing its `CmdError` payload as a {@link BamApiError}. */
+  private async call<T>(cmd: string, args?: Record<string, unknown>): Promise<T> {
+    try {
+      return await this.invoke<T>(cmd, args);
+    } catch (e) {
+      const err = e as { message?: string; span?: [number, number] | null };
+      if (err && typeof err.message === "string") {
+        throw new BamApiError(err.message, err.span);
+      }
+      throw e;
+    }
+  }
+
   searchPackages(req: SearchPackagesRequest) {
-    return this.invoke<SearchPackagesResponse>("search_packages", { req });
+    return this.call<SearchPackagesResponse>("search_packages", { req });
   }
   searchWindow(req: SearchWindowRequest) {
-    return this.invoke<SearchWindowResponse>("search_window", { req });
+    return this.call<SearchWindowResponse>("search_window", { req });
   }
   getPackage(req: GetPackageRequest) {
-    return this.invoke<GetPackageResponse>("get_package", { req });
+    return this.call<GetPackageResponse>("get_package", { req });
   }
   parseQuery(req: ParseQueryRequest) {
-    return this.invoke<ParseQueryResponse>("parse_query", { req });
+    return this.call<ParseQueryResponse>("parse_query", { req });
   }
   filterIds(req: FilterIdsRequest) {
-    return this.invoke<FilterIdsResponse>("filter_ids", { req });
+    return this.call<FilterIdsResponse>("filter_ids", { req });
   }
   listCategories() {
-    return this.invoke<ListCategoriesResponse>("list_categories");
+    return this.call<ListCategoriesResponse>("list_categories");
   }
   selectByQuery(req: SelectByQueryRequest) {
-    return this.invoke<SelectByQueryResponse>("select_by_query", { req });
+    return this.call<SelectByQueryResponse>("select_by_query", { req });
   }
   async saveAs(req: SaveAsRequest) {
-    await this.invoke<void>("save_as", { req });
+    await this.call<void>("save_as", { req });
   }
   async load(req: LoadRequest) {
-    await this.invoke<void>("load", { req });
+    await this.call<void>("load", { req });
   }
   async deleteSelection(req: DeleteSelectionRequest) {
-    await this.invoke<void>("delete_selection", { req });
+    await this.call<void>("delete_selection", { req });
   }
   listSelections() {
-    return this.invoke<ListSelectionsResponse>("list_selections");
+    return this.call<ListSelectionsResponse>("list_selections");
   }
   startIngest(req: StartIngestRequest) {
-    return this.invoke<OperationId>("start_ingest", { req });
+    return this.call<OperationId>("start_ingest", { req });
   }
   operationStatus(operation: OperationId) {
-    return this.invoke<OperationStatusResponse>("operation_status", { operation });
+    return this.call<OperationStatusResponse>("operation_status", { operation });
+  }
+  async toggle(packageId: number) {
+    const res = await this.call<{ marked: boolean }>("toggle", {
+      req: { package_id: packageId },
+    });
+    return res.marked;
   }
 
   async *progress(operation: OperationId, signal?: AbortSignal): AsyncIterable<ProgressEvent> {

@@ -15,6 +15,7 @@ use bam_core::api::{self, OperationStatusRequest};
 use bam_core::http::ReqwestClient;
 use bam_core::progress::{OperationId, ProgressEvent};
 use bam_server::state::SessionHandle;
+use serde::{Deserialize, Serialize};
 use tauri::{AppHandle, Emitter, Manager, State};
 
 struct DesktopState {
@@ -22,10 +23,37 @@ struct DesktopState {
     http: ReqwestClient,
 }
 
-type CmdResult<T> = Result<T, String>;
+type CmdResult<T> = Result<T, CmdError>;
 
-fn err(e: api::Error) -> String {
-    e.to_string()
+/// Mirrors `bam-server`'s `ApiError` (P9.2): `span` survives a `Parse`
+/// variant so `TauriClient`'s query input can highlight the offending byte
+/// range the same way the HTTP transport does, from the one place this
+/// crate translates a core error into a command rejection.
+#[derive(Serialize)]
+struct CmdError {
+    message: String,
+    span: Option<(usize, usize)>,
+}
+
+fn err(e: api::Error) -> CmdError {
+    let span = match &e {
+        api::Error::Parse(parse_err) => parse_err.span,
+        _ => None,
+    };
+    CmdError {
+        message: e.to_string(),
+        span,
+    }
+}
+
+#[derive(Deserialize)]
+struct PackageIdRequest {
+    package_id: i64,
+}
+
+#[derive(Serialize)]
+struct MarkedResponse {
+    marked: bool,
 }
 
 #[tauri::command]
@@ -175,6 +203,19 @@ async fn start_ingest(
 }
 
 #[tauri::command]
+async fn toggle(
+    state: State<'_, DesktopState>,
+    req: PackageIdRequest,
+) -> CmdResult<MarkedResponse> {
+    let marked = state
+        .handle
+        .call(move |cs| api::toggle(&cs.session, req.package_id))
+        .await
+        .map_err(err)?;
+    Ok(MarkedResponse { marked })
+}
+
+#[tauri::command]
 async fn operation_status(
     state: State<'_, DesktopState>,
     operation: OperationId,
@@ -216,6 +257,7 @@ pub fn run() {
             load,
             delete_selection,
             list_selections,
+            toggle,
             start_ingest,
             operation_status,
         ])

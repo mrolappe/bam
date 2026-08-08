@@ -222,6 +222,30 @@ async fn every_operation_is_reachable_and_round_trips() {
     assert_eq!(clear.status(), 204);
 }
 
+/// A bad query's `span` (P3.5's reference: `bam_dsl`'s parser attaches byte
+/// offsets to a `ParseError`) must survive the flatten to JSON — P9.4's
+/// frontend query input highlights it, and losing it would leave that
+/// component with a message but no position to underline.
+#[tokio::test]
+async fn parse_error_span_survives_over_http() {
+    let (base, _db_path) = start_server("parse-error-span").await;
+    let c = client();
+
+    let resp = c
+        .post(format!("{base}/api/parse-query"))
+        .json(&json!({"src": "dir:util/* size>"}))
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(resp.status(), 400);
+    let body: Value = resp.json().await.unwrap();
+    assert!(body.get("error").and_then(Value::as_str).is_some());
+    assert!(
+        body.get("span").is_some_and(|s| !s.is_null()),
+        "expected a byte span alongside the message: {body:?}"
+    );
+}
+
 /// Two concurrent sessions do not observe each other's working selection.
 #[tokio::test]
 async fn two_sessions_do_not_observe_each_others_state() {

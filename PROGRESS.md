@@ -243,6 +243,42 @@ inline error display) landing in `frontend/components/`, consumed by both
 
 ---
 
+## Round 47 — 2026-08-08 · Phase 9: package list and detail views (P9.4)
+
+Three new `frontend/components/`: `PackageList.vue` (virtualized — renders
+only the rows within a configurable `viewportHeight` of the scroll offset
+plus overscan, so an 84,000-row result still only ever mounts a few dozen
+`<li>`s), `PackageDetail.vue` (fetches and renders the selected package via
+`getPackage`), and `QueryInput.vue` (150ms-debounced `parseQuery`, matching
+`bam-tui`'s `DEBOUNCE` constant exactly, P3.5's reference).
+
+Getting the error-span test to mean anything surfaced a real gap: `BamClient`
+had no way to report *where* a bad query failed, and both backends were
+flattening `ParseError` down to a bare string before it ever left Rust.
+Fixed at the source rather than worked around in the component: `bam-server`'s
+`ApiError` and `bam-tauri`'s new `CmdError` both now carry the `Option<(usize,
+usize)>` span from `SessionError::Parse` alongside the message, and
+`BamClient` gained a `BamApiError` (message + optional span) that `HttpClient`
+and `TauriClient` throw uniformly — one error shape regardless of transport,
+same seam P9.1 established. `BamClient` also grew `toggle()` (I7), plumbed
+through a `bam-tauri` `toggle` command that didn't exist before this round
+(the HTTP side already had the route from P9.2; parity was the actual gap).
+
+All four of P9.4's tests hold, plus one added for the span fix: component
+tests for list/detail/query-input against a shared `mockClient` test helper;
+the 84,000-row virtualization bound; query errors rendering the offending
+byte range in a `<mark>` with the previous predicate left in place on
+failure; mark-toggle round-tripping through the injected client; and a new
+Rust test (`parse_error_span_survives_over_http`) proving the span isn't
+lost in `bam-server`'s JSON flatten. 236 Rust tests (1 added), 22 frontend
+tests (11 added), CI unchanged — no new dependency, no new workflow step.
+
+**Next:** P9.5, the timeline visualization — uploads over time, filterable
+by the active query, respecting `date_precision` so `week`-precision points
+are never drawn as exact.
+
+---
+
 ## Decisions carried forward
 
 The eight architectural invariants are stated in full in

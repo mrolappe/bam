@@ -50,11 +50,24 @@ pub fn router(state: Arc<AppState>) -> Router {
 
 /// Wraps `bam_core::api::Error` (a plain `SessionError`) as a JSON error
 /// response — the only place this crate translates a core error into HTTP.
-struct ApiError(String);
+/// `span` survives a `Parse` variant so the frontend's query input can
+/// highlight the offending byte range (P3.5's reference behaviour), rather
+/// than flattening every error down to a bare message.
+struct ApiError {
+    message: String,
+    span: Option<(usize, usize)>,
+}
 
 impl From<api::Error> for ApiError {
     fn from(e: api::Error) -> Self {
-        ApiError(e.to_string())
+        let span = match &e {
+            api::Error::Parse(parse_err) => parse_err.span,
+            _ => None,
+        };
+        ApiError {
+            message: e.to_string(),
+            span,
+        }
     }
 }
 
@@ -62,7 +75,7 @@ impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         (
             StatusCode::BAD_REQUEST,
-            Json(serde_json::json!({ "error": self.0 })),
+            Json(serde_json::json!({ "error": self.message, "span": self.span })),
         )
             .into_response()
     }
