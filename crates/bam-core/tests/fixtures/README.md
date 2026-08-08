@@ -29,3 +29,9 @@ Source: `https://ftp.fau.de/aminet/` — fetched 2026-08-06.
   wrong, per this round's own check; fixed in passing to strip the final
   extension (still one 404 short of correct for `.tar.bz2` files, same
   single-extension limitation `split_name_version`, P1.6, already has).
+- `Amigaguide.guide` — Commodore's own AmigaGuide format documentation,
+  fetched 2026-08-08 from `text/hyper/amigaguidedocs.lha` and extracted with
+  `unar`. Real hand-written markup: 8 `@node`/`@endnode` pairs,
+  `@next`/`@prev`/`@toc` navigation, `@{b}`/`@{i}`/`@{u}` style toggles,
+  `@{"text" Link "Node"}` links, and an escaped `\@{...}` inside a `@MACRO`
+  example — good coverage for P9.7's parser without needing a synthetic file.

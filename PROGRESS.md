@@ -273,9 +273,64 @@ Rust test (`parse_error_span_survives_over_http`) proving the span isn't
 lost in `bam-server`'s JSON flatten. 236 Rust tests (1 added), 22 frontend
 tests (11 added), CI unchanged — no new dependency, no new workflow step.
 
-**Next:** P9.5, the timeline visualization — uploads over time, filterable
-by the active query, respecting `date_precision` so `week`-precision points
-are never drawn as exact.
+**Next:** P9.7, the AmigaGuide parser — `nom` into a custom AST over
+`text/hyper/` fixtures from Aminet (line commands, inline attributes, link
+resolution, graceful degradation on malformed markup, P1.5 encoding
+handling). Picked over P9.5/P9.6 because it's a standalone parser with no
+Vue/UI dependency — order among the three remaining Phase 9 items (P9.5
+timeline viz, P9.6 archive content viz, P9.7 AmigaGuide) is otherwise free;
+P9.7 just doesn't block on or share code with the other two, so it can run
+independently. Phase 9 exit needs all three closed.
+
+---
+
+## Round 48 — 2026-08-08 · Phase 9: AmigaGuide parser (P9.7)
+
+A `nom` parser into a custom AST (`bam_core::ingest::amigaguide`):
+`GuideDocument { database, nodes }`, each `GuideNode` carrying
+`name`/`title`/`next`/`prev`/`toc` plus a `body: Vec<Inline>` of
+`Text`/`Styled(Style, children)`/`Link` — nesting is real tree structure, not
+a flat run list, built from a tokenized chunk stream via an explicit
+open-style stack so `@{b}...@{i}...@{ui}...@{ub}` closes into
+bold-containing-italic rather than two flat spans. `nom` earns its place
+here the way P2.4 said it wouldn't for `bam-dsl`: line commands and inline
+attribute codes are many small, near-identical productions, which is what
+combinators are for. Nothing in the module returns `Result` — malformed
+input (an unmatched `@{`, an attribute code that isn't recognised, a style
+never closed before `@endnode`) degrades to literal text or gets flushed at
+end-of-node rather than failing the parse, matching the plan's "thirty-year-
+old files, some are simply broken" framing directly in the type signatures.
+
+The real fixture is Commodore's own `Amigaguide.guide` — fetched from
+Aminet's `text/hyper/amigaguidedocs.lha` (`unar`-extracted) rather than
+synthesized, since it already exercises 8 `@node`/`@endnode` pairs,
+navigation fields, both style and link attributes, and one escaped `\@{...}`
+inside a `@MACRO` example. Parsing it against that fixture surfaced a real
+bug before any test needed to name it: a body line starting with `@{` at
+column 0 (the fixture's own `@{b}$VER: ...@{ub}`) was being swallowed whole
+as an unrecognised line command, because `@{...}` and `@command` share the
+same leading `@`. Fixed at the one place that distinguishes them —
+`command_line` now returns `None` for anything starting `@{`, so it falls
+through to body text — rather than special-casing it in each call site.
+`nom` was not yet a workspace dependency; added at `"7"` (pure Rust, so I1's
+`wasm32-unknown-unknown --no-default-features` build for `bam-core` still
+holds, checked directly rather than assumed).
+
+All five of P9.7's tests hold: the real fixture parses to the expected
+8-node AST with the front page's 7 links and 1 italic span; every one of
+those links resolves to a real node name via `GuideDocument::find_node`;
+a small literal case proves bold-containing-italic-containing-link nests as
+a real tree; an unrecognised attribute code and an unclosed style both
+degrade to literal text without panicking; and a Latin-1-encoded byte in a
+node body decodes through P1.5's `decode` (not assumed UTF-8) via the same
+`WINDOWS_1252` path `charset.rs` already uses for ISO-8859-1. 241 Rust tests
+(5 added), `cargo fmt`/`clippy --workspace --all-targets` clean, no other
+workflow changes.
+
+**Next:** P9.5 or P9.6 — the two remaining Phase 9 items, both Vue chart
+components over data that already exists (`package.date_precision` for the
+timeline, P5.8's inventory payload for per-archive content). Order between
+them is free, same as noted last round. Phase 9 exit needs both closed.
 
 ---
 

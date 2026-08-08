@@ -15,6 +15,7 @@ schemars.workspace = true
 thiserror.workspace = true
 chardetng.workspace = true
 encoding_rs.workspace = true
+nom.workspace = true
 flate2.workspace = true
 blake3.workspace = true
 rusqlite = { workspace = true, optional = true }
