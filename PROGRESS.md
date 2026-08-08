@@ -94,12 +94,37 @@ preserved as `.uaem` sidecars and file inventories captured as enrichment —
 
 ## Next task
 
-**Phase 5 exit reached** — the plan's own "reassess sequencing here" point
-(§15: "Phases 0–5 are the hard core. 6–9 are additive and can be
-resequenced."). Phase 6 is next in the table's default order — launcher
-registry, FS-UAE ([phase-6-launchers.md](docs/plan/phase-6-launchers.md)) —
-but nothing forces that order over 7/8/9; worth confirming with the user
-before starting rather than assuming.
+**Phase 7 — LLM layer** ([phase-7-llm.md](docs/plan/phase-7-llm.md)),
+user's explicit choice (2026-08-08) over the table's default order (Phase
+6 next), since phases 6–9 are additive and resequenceable (§15). Start with
+**P7.1**, the `LlmProvider` trait plus an OpenAI-compatible implementation
+covering llama.cpp/Ollama/cloud endpoints, differing only in
+`capabilities()` — local **llama.cpp** is the documented default (decided
+2026-08-06, see "Resolved open questions" below).
+
+What Phase 7 can already build on, so a fresh session doesn't have to
+re-derive it:
+- **P1.9's `HttpClient` trait** — P7.1 explicitly reuses it so every test
+  but the one `#[ignore]`d real-server test runs offline.
+- **P2.1's `Similar` IR node** was reserved but rejected by the compiler
+  since Round 8/9 (P2.5) specifically for P7.4 to unreserve.
+- **P2.2's `QueryLanguage` trait** (`grammar()`) is what P7.2 derives GBNF
+  and JSON Schema from — both representations from one source, never
+  hand-maintained separately (§10).
+- **P2.7's selection API** (I7) is what P7.5 targets a summarisation run at
+  a selection rather than the whole table.
+- **The `enrichment` table plus `upsert_enrichment`** (added this session
+  in Round 34/P5.8) is exactly the mechanism P7.5's `kind = 'llm_summary'`
+  producer needs — readme (P4.5's `readme_header`) and inventory (P5.8's
+  `inventory`) are its two inputs.
+- Not yet in the workspace: `sqlite-vec`, needed for P7.4's embedding
+  storage — add it then, not speculatively now.
+
+§16's cost-visibility requirement (P7.5: estimated token count/cost shown
+and confirmed before a bulk run against a paid provider) and §11's
+always-editable-generated-query rule (P7.3) are both hard requirements
+named directly in the phase doc, not just nice-to-haves — worth keeping in
+view across all of Phase 7, not just their own tasks.
 
 ---
 
