@@ -52,3 +52,6 @@ pub trait LlmProvider {
 
 mod openai_compatible;
 pub use openai_compatible::{OpenAiCompatibleConfig, OpenAiCompatibleProvider};
+
+mod query_prompt;
+pub use query_prompt::{QueryGenError, build_prompt, generate_query};

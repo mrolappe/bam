@@ -175,35 +175,65 @@ bam-core --no-default-features --target wasm32-unknown-unknown` still
 compiles (I1 holds — `grammar.rs` is plain code, no `native` gate, and
 `schemars` was already an ungated dependency).
 
+## Round 37 — 2026-08-08 · Phase 7: query generation prompt (P7.3)
+
+`crates/bam-core/src/llm/query_prompt.rs` (new): `build_prompt` assembles
+the natural-language-to-`bam-dsl` prompt — task instructions, the TREE
+category vocabulary (`dir:` values, passed in by the caller since TREE data
+is per-mirror-snapshot and nothing ingests it into the DB yet), a small
+hardcoded file-type dictionary (`.lha`, `.lzx`, `.zip`, `.readme`, `.txt`,
+`.dms`, `.info` — fixed across Aminet, so hardcoded rather than threaded
+through as configuration), and five few-shot examples written against
+`registry::package_fields`'s actual field set (`dir`, `year`, `size`,
+`description`, `marked`) rather than `bam-handoff.md`'s illustrative
+`type`/`author` examples, which have no backing column yet.
+
+`generate_query` picks `CompletionRequest.grammar` or `.json_schema` from
+`provider.capabilities().grammar` (P7.1/P7.2's existing wiring), calls
+`complete`, then routes the completion back through `BamDsl::parse` (GBNF
+path) or `serde_json::from_str::<Predicate>` (JSON-Schema path) into a
+`Predicate`, and returns `BamDsl::render`ed text. It touches nothing in
+`bam-core::store` or `bam-core::api` — no import, no call — so §11's "always
+shown, always editable, never auto-run" rule holds structurally: this
+function has no way to run a query even if it wanted to, confirmed by
+reading its full call graph rather than by a test that could pass for the
+wrong reason.
+
+`crates/bam-core/tests/llm_query_prompt.rs`: a `FakeProvider` implementing
+`LlmProvider` directly (simpler than the HTTP-layer `FakeClient` P7.1's
+tests use, since this layer never touches HTTP itself) drives ten
+natural-language cases through both the GBNF and JSON-Schema paths, each
+asserting the returned text re-parses under `BamDsl`; a prompt-content test
+spot-checks real category strings from `tests/fixtures/tree_sample.txt`
+(P1.1's `TREE` fixture, read and line-split by the test itself — no
+production TREE parser exists yet, so none was added just for this); an
+unbalanced-paren completion produces `QueryGenError::Unparseable`, not a
+panic; one `#[ignore]`d test runs the same ten queries against a real local
+llama.cpp server. 5 tests added (4 offline + 1 ignored). `cargo clippy
+--workspace --all-targets` clean; `cargo build -p bam-core
+--no-default-features --target wasm32-unknown-unknown` still compiles (I1
+holds — `query_prompt.rs` only touches `query::ir`/`query::lang`/
+`query::registry` and `llm`, none of which are `native`-gated).
+
 ## Next task
 
-**P7.3 — query generation prompt** ([phase-7-llm.md](docs/plan/phase-7-llm.md)):
-a prompt template carrying the TREE category vocabulary, a file-type
-dictionary, and few-shot examples (§11), with output grammar-constrained via
-P7.2's `BamDsl::grammar(GrammarKind::Gbnf)` threaded through
-`CompletionRequest.grammar` (llama.cpp) or `.json_schema` (cloud, this
-round's addition). Marked **S**.
+**P7.4 — embeddings and sqlite-vec** ([phase-7-llm.md](docs/plan/phase-7-llm.md)):
+add `sqlite-vec`, embed readme text via `LlmProvider::embed` (P7.1, already
+batches by construction — one call, many texts), store vectors, and enable
+P2.1's reserved `Similar` IR node by removing the compiler's rejection of
+it. Marked **S**.
 
-**The generated query is always shown to the user and always editable
-before it runs — §11's hard requirement, worth checking by call-graph
-review, not just by test.** A model returning unparseable output (or, for
-the JSON-Schema path, JSON that doesn't deserialize to a `Predicate`) must
-produce a clear error, not a panic — P7.2's `Predicate`'s ordinary
-`serde_json::from_str` failure is exactly that error path already.
+**Batch the embedding calls** — 84,000 sequential round-trips is a night of
+compute for no reason; §10 wants batching, not one-at-a-time. Resumability
+matters too: an interrupted run must not re-embed completed packages.
 
-What P7.2 leaves ready to build on:
-- `BamDsl::grammar(Gbnf)` and `BamDsl::grammar(JsonSchema)` both return
-  `Some` today (`crates/bam-core/src/query/bam_dsl.rs`) — P7.3 doesn't need
-  to touch grammar generation itself, only assemble the prompt and route
-  the model's output back through `BamDsl::parse` (text) or
-  `serde_json::from_str::<Predicate>` (JSON) into a `Predicate` for the
-  user to see and edit as rendered `bam-dsl` text (`BamDsl::render`).
-- `CompletionRequest.json_schema` (this round) is where the JSON Schema
-  string goes; `OpenAiCompatibleProvider` already threads it into
-  `response_format` for `GrammarSupport::JsonSchema` providers.
-- **P2.1's `Similar` IR node** is still reserved, still rejected by the
-  compiler, still waiting on P7.4 — P7.3's few-shot examples can use
-  `similar:` syntax (it parses and renders today) without it running.
+What Round 37 leaves ready to build on:
+- P7.3's few-shot examples already use `dir:`/`year:`/`size:` syntax that
+  parses today; `similar:'text' > threshold` also parses and renders
+  (P2.4) but the compiler still rejects it — P7.4 is what turns that on.
+- `LlmProvider::embed` (P7.1) already reorders by response `index`, so
+  P7.4's batching only needs to chunk the input, not worry about response
+  ordering.
 
 Still true from Round 35, unclaimed by this round:
 - **P2.7's selection API** (I7) is what P7.5 targets a summarisation run at.
