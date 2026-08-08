@@ -4,9 +4,10 @@
 
 use super::Error;
 use super::types::{
-    FilterIdsRequest, FilterIdsResponse, GetPackageRequest, GetPackageResponse,
-    ListCategoriesResponse, ParseQueryRequest, ParseQueryResponse, SearchPackagesRequest,
-    SearchPackagesResponse, SearchWindowRequest, SearchWindowResponse,
+    FilterIdsRequest, FilterIdsResponse, GetInventoryRequest, GetInventoryResponse,
+    GetPackageRequest, GetPackageResponse, ListCategoriesResponse, ParseQueryRequest,
+    ParseQueryResponse, SearchPackagesRequest, SearchPackagesResponse, SearchWindowRequest,
+    SearchWindowResponse,
 };
 use crate::store::session::Session;
 
@@ -56,6 +57,16 @@ pub fn get_package(
 ) -> Result<GetPackageResponse, Error> {
     let package = session.get_package(req.id)?;
     Ok(GetPackageResponse { package })
+}
+
+/// A package's file inventory (P5.8), for the frontend's per-archive content
+/// view (P9.6) — `None` when nothing has been extracted/analyzed yet.
+pub fn get_inventory(
+    session: &Session,
+    req: &GetInventoryRequest,
+) -> Result<GetInventoryResponse, Error> {
+    let inventory = session.get_inventory(req.package_id)?;
+    Ok(GetInventoryResponse { inventory })
 }
 
 pub fn list_categories(session: &Session) -> Result<ListCategoriesResponse, Error> {

@@ -5,9 +5,13 @@ export type ApiTypes =
   | DeleteSelectionRequest
   | FilterIdsRequest
   | FilterIdsResponse
+  | GetInventoryRequest
+  | GetInventoryResponse
   | GetPackageRequest
   | GetPackageResponse
   | IngestMode
+  | Inventory
+  | InventoryEntry
   | ListCategoriesResponse
   | ListSelectionsResponse
   | LoadRequest
@@ -149,6 +153,20 @@ export interface FilterIdsRequest {
 }
 export interface FilterIdsResponse {
   ids: number[];
+}
+export interface GetInventoryRequest {
+  package_id: number;
+}
+export interface GetInventoryResponse {
+  inventory?: Inventory | null;
+}
+export interface Inventory {
+  files: InventoryEntry[];
+}
+export interface InventoryEntry {
+  kind: string;
+  path: string;
+  size: number;
 }
 export interface GetPackageRequest {
   id: number;

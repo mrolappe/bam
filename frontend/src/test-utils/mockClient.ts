@@ -8,6 +8,7 @@ export function mockClient(overrides: Partial<BamClient> = {}): BamClient {
     searchPackages: vi.fn(async () => ({ packages: [] })),
     searchWindow: vi.fn(async () => ({ packages: [], total: 0 })),
     getPackage: vi.fn(async () => ({ package: null })),
+    getInventory: vi.fn(async () => ({ inventory: null })),
     parseQuery: vi.fn(async () => ({ predicate: { FullText: "" } })),
     filterIds: vi.fn(),
     listCategories: vi.fn(),

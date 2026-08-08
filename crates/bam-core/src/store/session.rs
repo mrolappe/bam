@@ -33,6 +33,7 @@ use crate::query::bam_dsl::BamDsl;
 use crate::query::ir::{Predicate, SelectionRef};
 use crate::query::lang::{LanguageError, LanguageRegistry, ParseError};
 use crate::query::registry::{FieldRegistry, package_fields};
+use crate::unpack::{INVENTORY_KIND, Inventory};
 
 /// [`Session::enqueue_readmes`] priority for a package outside the caller's
 /// visible window — still worth fetching, just not before what's on screen.
@@ -56,6 +57,8 @@ pub enum SessionError {
     Language(#[from] LanguageError),
     #[error("no selection named '{0}'")]
     UnknownSelection(String),
+    #[error(transparent)]
+    Serde(#[from] serde_json::Error),
 }
 
 /// Last known status of an operation started through [`Session::run_ingest`],
@@ -225,6 +228,17 @@ impl Session {
     pub fn get_package(&self, id: i64) -> Result<Option<Package>, SessionError> {
         match tables::get_package(&self.conn, id) {
             Ok(p) => Ok(Some(p)),
+            Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
+            Err(e) => Err(e.into()),
+        }
+    }
+
+    /// A package's file inventory (P5.8), or `None` when it hasn't been
+    /// extracted/analyzed yet — distinct from an empty archive, which would
+    /// still have an enrichment row.
+    pub fn get_inventory(&self, package_id: i64) -> Result<Option<Inventory>, SessionError> {
+        match tables::get_enrichment(&self.conn, package_id, INVENTORY_KIND) {
+            Ok(row) => Ok(Some(serde_json::from_str(&row.payload)?)),
             Err(rusqlite::Error::QueryReturnedNoRows) => Ok(None),
             Err(e) => Err(e.into()),
         }

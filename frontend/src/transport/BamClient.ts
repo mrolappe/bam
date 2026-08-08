@@ -8,6 +8,8 @@ import type {
   SearchWindowResponse,
   GetPackageRequest,
   GetPackageResponse,
+  GetInventoryRequest,
+  GetInventoryResponse,
   ParseQueryRequest,
   ParseQueryResponse,
   FilterIdsRequest,
@@ -29,6 +31,7 @@ export interface BamClient {
   searchPackages(req: SearchPackagesRequest): Promise<SearchPackagesResponse>;
   searchWindow(req: SearchWindowRequest): Promise<SearchWindowResponse>;
   getPackage(req: GetPackageRequest): Promise<GetPackageResponse>;
+  getInventory(req: GetInventoryRequest): Promise<GetInventoryResponse>;
   /** Rejects with {@link BamApiError} (span set when the language can pin one) on a bad query. */
   parseQuery(req: ParseQueryRequest): Promise<ParseQueryResponse>;
   filterIds(req: FilterIdsRequest): Promise<FilterIdsResponse>;

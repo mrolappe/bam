@@ -358,6 +358,46 @@ follows once it closes.
 
 ---
 
+## Round 50 — 2026-08-08 · Phase 9: per-archive content visualization (P9.6, Phase 9 exit)
+
+`PackageContent.vue`, the last Phase 9 component: renders P5.8's inventory
+payload (per-kind file counts/sizes, directory listing) or a "not analyzed"
+state when no `inventory` enrichment row exists yet for the package. Getting
+there needed a new API surface that hadn't existed before this round —
+`Session::get_inventory` deserializes the `enrichment` row's JSON payload
+through P5.8's existing `store::tables::get_enrichment`, returning `None` on
+`QueryReturnedNoRows` rather than an error (the same pattern `get_package`
+already uses), with a new `SessionError::Serde` variant for a payload that
+fails to deserialize. `Inventory`/`InventoryEntry` (`unpack::inventory`)
+gained `JsonSchema` derives — needed for `bam-core::api`'s schema export but
+not before, since nothing crossed the API boundary carrying them. Wired
+through every layer the existing `get_package` surface already established:
+`api::get_inventory`, `bam-server`'s `POST /api/get-inventory` (one `route!`
+macro line), `bam-tauri`'s `get_inventory` command, and `BamClient`/
+`HttpClient`/`TauriClient`/`mockClient` in lockstep — no new pattern
+introduced anywhere, just the existing one extended one more time.
+
+Both of P9.6's tests hold, plus one added at the `Session`/`api` layer since
+this round introduced real (if thin) new logic there, not just a component:
+a component test renders file-type and directory groupings from a fixture
+inventory without any blob present; a second shows the "not analyzed" state
+when `getInventory` resolves `null`; and `get_inventory_reflects_enrichment_state`
+proves `None` before enrichment exists and the deserialized payload once
+`store::inventory` (P5.8) would have written one. 242 Rust tests (1 added),
+29 frontend tests (3 added), `cargo fmt`/`clippy --workspace --all-targets`
+clean, no new dependency, no workflow changes.
+
+**Phase 9 exit reached.** All of P9.1–P9.7 are closed: a Vue frontend behind
+one `BamClient` seam, served by both `bam-server` (HTTP/SSE) and `bam-tauri`
+(desktop) hosts with no fork between them, covering package list/detail/
+query input, timeline and per-archive content visualization, and a standalone
+AmigaGuide parser. Everything in `IMPLEMENTATION_PLAN.md` through Phase 9 is
+now closed; Phase 8 (the extism WASM plugin host, noted as a scheduled
+follow-on since the 2026-08-06 open-questions session) is the only
+unclosed phase left in the plan.
+
+---
+
 ## Decisions carried forward
 
 The eight architectural invariants are stated in full in

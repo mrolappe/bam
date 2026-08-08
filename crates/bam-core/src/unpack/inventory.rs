@@ -7,6 +7,7 @@ use std::fs;
 use std::path::Path;
 use std::sync::atomic::{AtomicU64, Ordering};
 
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
 use crate::blob::BlobHash;
@@ -18,14 +19,14 @@ pub const INVENTORY_KIND: &str = "inventory";
 /// `enrichment.producer_version` for this module's output shape.
 pub const INVENTORY_PRODUCER_VERSION: i64 = 1;
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct InventoryEntry {
     pub path: String,
     pub size: u64,
     pub kind: String,
 }
 
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct Inventory {
     pub files: Vec<InventoryEntry>,
 }

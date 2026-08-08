@@ -93,6 +93,18 @@ async fn get_package(
 }
 
 #[tauri::command]
+async fn get_inventory(
+    state: State<'_, DesktopState>,
+    req: api::GetInventoryRequest,
+) -> CmdResult<api::GetInventoryResponse> {
+    state
+        .handle
+        .call(move |cs| api::get_inventory(&cs.session, &req))
+        .await
+        .map_err(err)
+}
+
+#[tauri::command]
 async fn parse_query(
     state: State<'_, DesktopState>,
     req: api::ParseQueryRequest,
@@ -249,6 +261,7 @@ pub fn run() {
             search_packages,
             search_window,
             get_package,
+            get_inventory,
             parse_query,
             filter_ids,
             list_categories,

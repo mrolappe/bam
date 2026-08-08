@@ -12,6 +12,7 @@ use crate::query::ir::Predicate;
 use crate::store::ingest::IngestMode;
 use crate::store::session::{OperationStatus, SelectionMode};
 use crate::store::tables::Package;
+use crate::unpack::{Inventory, InventoryEntry};
 
 use super::types::*;
 
@@ -51,6 +52,10 @@ pub fn all_schemas() -> Map<String, Value> {
         SearchWindowResponse,
         GetPackageRequest,
         GetPackageResponse,
+        Inventory,
+        InventoryEntry,
+        GetInventoryRequest,
+        GetInventoryResponse,
         ListCategoriesResponse,
         SelectByQueryRequest,
         SelectByQueryResponse,

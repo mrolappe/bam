@@ -9,6 +9,8 @@ import type {
   SearchWindowResponse,
   GetPackageRequest,
   GetPackageResponse,
+  GetInventoryRequest,
+  GetInventoryResponse,
   ParseQueryRequest,
   ParseQueryResponse,
   FilterIdsRequest,
@@ -75,6 +77,9 @@ export class HttpClient implements BamClient {
   }
   getPackage(req: GetPackageRequest) {
     return this.post<GetPackageRequest, GetPackageResponse>("/api/get-package", req);
+  }
+  getInventory(req: GetInventoryRequest) {
+    return this.post<GetInventoryRequest, GetInventoryResponse>("/api/get-inventory", req);
   }
   parseQuery(req: ParseQueryRequest) {
     return this.post<ParseQueryRequest, ParseQueryResponse>("/api/parse-query", req);

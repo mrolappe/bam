@@ -7,9 +7,10 @@ use std::path::PathBuf;
 use std::sync::atomic::{AtomicU64, Ordering};
 
 use bam_core::api::types::{
-    GetPackageRequest, GetPackageResponse, ListCategoriesResponse, ListSelectionsResponse,
-    LoadRequest, OperationStatusRequest, OperationStatusResponse, SaveAsRequest,
-    SearchPackagesRequest, SearchPackagesResponse, SelectByQueryRequest, SelectByQueryResponse,
+    GetInventoryRequest, GetPackageRequest, GetPackageResponse, ListCategoriesResponse,
+    ListSelectionsResponse, LoadRequest, OperationStatusRequest, OperationStatusResponse,
+    SaveAsRequest, SearchPackagesRequest, SearchPackagesResponse, SelectByQueryRequest,
+    SelectByQueryResponse,
 };
 use bam_core::api::{self, CancellationToken, OperationStatus};
 use bam_core::http::{HttpClient, HttpError, HttpRequest, HttpResponse};
@@ -17,7 +18,8 @@ use bam_core::progress::{OperationId, ProgressEvent, ProgressSink};
 use bam_core::query::ir::{FieldId, Predicate};
 use bam_core::store::ingest::IngestMode;
 use bam_core::store::session::{SelectionMode, Session};
-use bam_core::store::tables::{self, LandingIndexLine, Package};
+use bam_core::store::tables::{self, Enrichment, LandingIndexLine, Package};
+use bam_core::unpack::{INVENTORY_KIND, INVENTORY_PRODUCER_VERSION};
 
 /// A unique on-disk path per test: an in-memory DB is a fresh, private
 /// database per `Connection::open` call, which can't demonstrate "two
@@ -249,6 +251,40 @@ async fn search_get_and_list_categories_work_through_the_api() {
 
     let categories = api::list_categories(&session).unwrap();
     assert_eq!(categories.categories, vec!["mods/tracker".to_string()]);
+
+    drop(session);
+    let _ = std::fs::remove_file(&path);
+}
+
+/// `get_inventory` (P9.6): `None` before any enrichment exists, the
+/// deserialized payload once `store::inventory` has written one.
+#[tokio::test]
+async fn get_inventory_reflects_enrichment_state() {
+    let path = temp_db_path("inventory");
+    let id = seed_package(&path, "text/hyper");
+    let session = Session::open(&path).unwrap();
+
+    let missing = api::get_inventory(&session, &GetInventoryRequest { package_id: id }).unwrap();
+    assert_eq!(missing.inventory, None);
+
+    let conn = bam_core::store::open(&path).unwrap();
+    tables::upsert_enrichment(
+        &conn,
+        &Enrichment {
+            package_id: id,
+            kind: INVENTORY_KIND.to_string(),
+            producer_version: INVENTORY_PRODUCER_VERSION,
+            produced_at: "2026-08-08T00:00:00Z".to_string(),
+            payload: r#"{"files":[{"path":"readme.txt","size":42,"kind":"text"}]}"#.to_string(),
+        },
+    )
+    .unwrap();
+    drop(conn);
+
+    let found = api::get_inventory(&session, &GetInventoryRequest { package_id: id }).unwrap();
+    let inventory = found.inventory.expect("inventory written above");
+    assert_eq!(inventory.files.len(), 1);
+    assert_eq!(inventory.files[0].path, "readme.txt");
 
     drop(session);
     let _ = std::fs::remove_file(&path);

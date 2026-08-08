@@ -25,6 +25,7 @@ pub fn router(state: Arc<AppState>) -> Router {
         .route("/api/search-packages", post(search_packages))
         .route("/api/search-window", post(search_window))
         .route("/api/get-package", post(get_package))
+        .route("/api/get-inventory", post(get_inventory))
         .route("/api/parse-query", post(parse_query))
         .route("/api/filter-ids", post(filter_ids))
         .route("/api/list-categories", post(list_categories))
@@ -115,6 +116,7 @@ route!(
 );
 route!(search_window, api::SearchWindowRequest, api::search_window);
 route!(get_package, api::GetPackageRequest, api::get_package);
+route!(get_inventory, api::GetInventoryRequest, api::get_inventory);
 route!(parse_query, api::ParseQueryRequest, api::parse_query);
 route!(filter_ids, api::FilterIdsRequest, api::filter_ids);
 route!(

@@ -11,6 +11,8 @@ import type {
   SearchWindowResponse,
   GetPackageRequest,
   GetPackageResponse,
+  GetInventoryRequest,
+  GetInventoryResponse,
   ParseQueryRequest,
   ParseQueryResponse,
   FilterIdsRequest,
@@ -69,6 +71,9 @@ export class TauriClient implements BamClient {
   }
   getPackage(req: GetPackageRequest) {
     return this.call<GetPackageResponse>("get_package", { req });
+  }
+  getInventory(req: GetInventoryRequest) {
+    return this.call<GetInventoryResponse>("get_inventory", { req });
   }
   parseQuery(req: ParseQueryRequest) {
     return this.call<ParseQueryResponse>("parse_query", { req });

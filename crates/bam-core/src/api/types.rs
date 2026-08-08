@@ -11,6 +11,7 @@ use crate::query::ir::Predicate;
 use crate::store::ingest::IngestMode;
 use crate::store::session::{OperationStatus, SelectionMode};
 use crate::store::tables::Package;
+use crate::unpack::Inventory;
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct SearchPackagesRequest {
@@ -68,6 +69,16 @@ pub struct GetPackageRequest {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
 pub struct GetPackageResponse {
     pub package: Option<Package>,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct GetInventoryRequest {
+    pub package_id: i64,
+}
+
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
+pub struct GetInventoryResponse {
+    pub inventory: Option<Inventory>,
 }
 
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, JsonSchema)]
