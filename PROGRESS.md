@@ -215,34 +215,91 @@ llama.cpp server. 5 tests added (4 offline + 1 ignored). `cargo clippy
 holds — `query_prompt.rs` only touches `query::ir`/`query::lang`/
 `query::registry` and `llm`, none of which are `native`-gated).
 
+## Round 38 — 2026-08-08 · Phase 7: embeddings and sqlite-vec (P7.4)
+
+`package_embedding` (migration 0007): one row per package, `vector` packed
+as raw little-endian float32 bytes — the exact layout sqlite-vec's
+`vec_distance_cosine` reads without further encoding, confirmed against a
+scratch crate before committing to the design (both a `vec0` virtual table
+and a plain-table + scalar-function approach were tried; the plain table
+won because `Similar`'s `threshold` is a similarity cutoff, not a top-`k`,
+and `vec0` is a KNN index that wants a `k` bound). `store::open` registers
+the extension once per process via `sqlite3_auto_extension`
+(`store/mod.rs`), so every connection gets `vec_distance_cosine` for free.
+
+`store::compile::compile` gains a `SimilarVectors` parameter (`text ->
+Vec<f32>`, `HashMap`): `Predicate::Similar` now compiles to an `EXISTS`
+against `package_embedding` (`1 - threshold` bound as the cosine-*distance*
+cutoff, since sqlite-vec returns distance and the DSL's `threshold` is a
+similarity) instead of `CompileError::SimilarNotSupported`, which is
+removed. The compiler stays synchronous and never touches an
+`LlmProvider` — resolving `text` to a vector is the caller's job
+(`CompileError::MissingEmbedding` when it hasn't been), the same division
+`marked_selection_id` already draws between the pure compiler and the
+session layer that resolves context before calling it. `Session`'s own
+`compiled_for` passes an empty map: no `Session` method has a provider to
+resolve `Similar` with, so one still errors clearly rather than silently
+matching nothing.
+
+`store::embeddings::run_batch` (new): one call embeds up to `batch_size`
+pending packages (readme landed, no embedding row yet) in exactly one
+`LlmProvider::embed` call — P7.1's `embed` already takes a batch, so this
+is chunking the input, not building new batching machinery. Mirrors
+`fetch_worker::step`'s shape (P4.3): one step per call, not a loop, so the
+caller controls pacing and an interrupted run resumes for free — the next
+call's `SELECT ... NOT EXISTS (... package_embedding ...)` just excludes
+whatever the previous call already wrote. A dimension change against
+what's already stored (`tables::any_package_embedding_dim`) is
+`EmbedError::DimensionMismatch`, not a silent write of an incompatible
+vector.
+
+`crates/bam-core/tests/store_compile.rs`: `similar_is_rejected_...` is gone
+(the compiler no longer rejects it); replaced with a caller-side
+`MissingEmbedding` test and a threshold-filtering test, three hand-picked
+3-vectors and threshold 0.5 correctly keeping the near-identical one and
+dropping the distant one. `crates/bam-core/tests/store_embeddings.rs`
+(new): 100 packages batched into 5 `embed` calls; an "interrupted" run (one
+batch, half the backlog) resumes and completes without a call count that
+would imply re-embedding; a model switch mid-run is a reported
+`DimensionMismatch`; and a hand-crafted-vector semantic search finds a
+readme sharing no words with the query (a literal FTS5 search for the same
+phrase misses it, checked in the same test) while excluding a
+keyword-matching decoy whose embedding is deliberately far away. All five
+of P7.4's tests pass. `cargo clippy --workspace --all-targets` clean
+(one `missing_transmute_annotations` warning from the extension
+registration's `transmute`, fixed with an explicit target type rather than
+left as a warning). `cargo build -p bam-core --no-default-features
+--target wasm32-unknown-unknown` still compiles (I1 holds — every P7.4
+change lives under `store`, already entirely `native`-gated;
+`sqlite-vec` is `native`-only in `Cargo.toml`, same as `rusqlite`).
+
 ## Next task
 
-**P7.4 — embeddings and sqlite-vec** ([phase-7-llm.md](docs/plan/phase-7-llm.md)):
-add `sqlite-vec`, embed readme text via `LlmProvider::embed` (P7.1, already
-batches by construction — one call, many texts), store vectors, and enable
-P2.1's reserved `Similar` IR node by removing the compiler's rejection of
-it. Marked **S**.
+**P7.5 — LLM summaries** ([phase-7-llm.md](docs/plan/phase-7-llm.md)):
+`kind = 'llm_summary'` enrichment from readme plus inventory. Rate limited,
+resumable, targetable at a selection (I7), and cost-visible before a bulk
+run starts (§16). Marked **S**.
 
-**Batch the embedding calls** — 84,000 sequential round-trips is a night of
-compute for no reason; §10 wants batching, not one-at-a-time. Resumability
-matters too: an interrupted run must not re-embed completed packages.
-
-What Round 37 leaves ready to build on:
-- P7.3's few-shot examples already use `dir:`/`year:`/`size:` syntax that
-  parses today; `similar:'text' > threshold` also parses and renders
-  (P2.4) but the compiler still rejects it — P7.4 is what turns that on.
-- `LlmProvider::embed` (P7.1) already reorders by response `index`, so
-  P7.4's batching only needs to chunk the input, not worry about response
-  ordering.
+What Round 38 leaves ready to build on:
+- `store::embeddings::run_batch`'s one-step-per-call shape and its
+  `NOT EXISTS`-against-the-output-table resumability pattern are the
+  template P7.5's own resumable batch run can reuse directly.
+- `tables::upsert_enrichment`'s `producer_version` reprocessing convention
+  (P5.8) is exactly what P7.5's "bumping `producer_version` reprocesses"
+  test needs — already built, not new for this phase.
+- `Similar` is real now: a future frontend wiring natural-language search
+  end-to-end needs to resolve query text to a vector (one `embed` call)
+  before calling `store::compile::compile`, then supply it as
+  `SimilarVectors` — no `Session` API change required to do that from the
+  caller's side.
 
 Still true from Round 35, unclaimed by this round:
 - **P2.7's selection API** (I7) is what P7.5 targets a summarisation run at.
 - **The `enrichment` table plus `upsert_enrichment`** (P5.8) is P7.5's
   `kind = 'llm_summary'` producer's mechanism.
-- Not yet in the workspace: `sqlite-vec`, needed for P7.4 — add it then.
 
 §16's cost-visibility requirement (P7.5) remains a hard requirement worth
-keeping in view, not yet due.
+keeping in view — now due.
 
 ---
 

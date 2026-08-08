@@ -30,6 +30,10 @@ const MIGRATIONS: &[Migration] = &[
         version: 6,
         sql: include_str!("../../migrations/0006_blobs.sql"),
     },
+    Migration {
+        version: 7,
+        sql: include_str!("../../migrations/0007_embeddings.sql"),
+    },
 ];
 
 /// Runs every migration newer than the DB's `user_version`, in order, and

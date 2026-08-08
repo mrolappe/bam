@@ -254,7 +254,8 @@ impl Session {
     /// the whole table. `compiled_for` runs regardless of whether `ids` is
     /// empty, so calling with `ids: &[]` doubles as a load-time validation
     /// trial — a rule whose predicate is well-typed but fails to compile
-    /// (e.g. `Similar`, not yet supported) is caught here without a real row.
+    /// (e.g. `Similar`, whose embedding this synchronous method can never
+    /// resolve) is caught here without a real row.
     pub fn matching_ids_among(
         &self,
         pred: &Predicate,
@@ -279,10 +280,16 @@ impl Session {
 
     fn compiled_for(&self, pred: &Predicate) -> Result<compile::CompiledQuery, SessionError> {
         self.check_named_selections_exist(pred)?;
+        // No `Similar` node is ever resolved here: embedding its `text`
+        // means calling an `LlmProvider` (async, over the network for a
+        // remote provider), which a plain, synchronous `Session` method
+        // has no way to do. A caller with a resolved vector compiles
+        // directly via `compile::compile` instead of through `Session`.
         Ok(compile::compile(
             pred,
             &self.registry,
             Some(self.working_selection_id),
+            &HashMap::new(),
         )?)
     }
 

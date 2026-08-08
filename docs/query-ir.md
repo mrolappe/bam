@@ -60,10 +60,12 @@ bareword/full-text case, with no field of its own; it's a whole-row search
 that compiles to a `description LIKE` fallback until P4.6's FTS5 table
 exists (P2.5).
 
-`Similar` is parsed and type-checked from the start but rejected by the
-compiler with "not yet supported" until P7.4 implements vector similarity.
-Reserving the node now avoids invalidating every generated grammar and
-few-shot prompt example a later phase would otherwise have to regenerate.
+`Similar` compiles (P7.4) against `package_embedding` (vectors populated by
+`store::embeddings::run_batch`, batched and resumable over
+`LlmProvider::embed`) via sqlite-vec's `vec_distance_cosine` — but only once
+the caller resolves `text` to an embedding and passes it in as the
+compiler's `SimilarVectors` map; the compiler itself stays synchronous and
+never calls an `LlmProvider`.
 
 ## The field registry
 
@@ -177,7 +179,7 @@ P2.3) become that task's test table verbatim.
 
 11. `similar:'tracker module editor' > 0.82`
     `Similar { text: "tracker module editor", threshold: 0.82 }`
-    (constructs and serializes today; the compiler rejects it until P7.4.)
+    (compiles once `text`'s embedding is resolved by the caller, P7.4.)
 
 12. `dir:mus/* (year<1995 OR year>2000)`
     `And([ Match{dir, Glob("mus/*")}, Or([ Compare{year, Lt, Int(1995)}, Compare{year, Gt, Int(2000)} ]) ])`

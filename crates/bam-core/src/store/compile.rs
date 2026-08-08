@@ -14,11 +14,14 @@
 //! until a field actually needs it — P2.8's own task text acknowledges this
 //! might turn out to be a P2.1 shape question, not a P2.5 one.
 
+use std::collections::HashMap;
+
 use rusqlite::types::Value as SqlValue;
 use thiserror::Error;
 
 use crate::query::ir::{CmpOp, FieldId, Pattern, Predicate, SelectionRef, Value};
 use crate::query::registry::{FieldDef, FieldRegistry, RegistryError, SqlSource};
+use crate::store::tables::pack_vector;
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct CompiledQuery {
@@ -26,29 +29,41 @@ pub struct CompiledQuery {
     pub params: Vec<SqlValue>,
 }
 
+/// text -> embedding, resolved by the caller (P7.4) before compiling: the
+/// compiler stays a pure, synchronous predicate-to-SQL translator, so
+/// embedding a `Similar.text` via `LlmProvider::embed` (async, over the
+/// network for a remote provider) happens outside it, the same way
+/// `marked_selection_id` is resolved by the session layer rather than by
+/// the compiler reaching into a connection itself.
+pub type SimilarVectors = HashMap<String, Vec<f32>>;
+
 #[derive(Debug, Clone, PartialEq, Error)]
 pub enum CompileError {
     #[error(transparent)]
     Registry(#[from] RegistryError),
-    #[error("similarity search is not yet supported")]
-    SimilarNotSupported,
     #[error("'marked' used with no working selection")]
     NoWorkingSelection,
     #[error("field '{0}' has a join source, not yet supported by the compiler")]
     UnsupportedJoinSource(&'static str),
+    #[error("no embedding resolved for similar:'{0}' — caller must embed it before compiling")]
+    MissingEmbedding(String),
 }
 
 /// Compiles `pred` to `SELECT id FROM package WHERE ...` plus its bound
 /// parameters, in order. `marked_selection_id` is the caller's current
 /// working selection (session-scoped, invariant I5) — required only if
-/// `pred` contains `InSelection(Marked)`.
+/// `pred` contains `InSelection(Marked)`. `similar_vectors` resolves any
+/// `Similar` node's `text` to its embedding (P7.4) — required only if
+/// `pred` contains one; pass an empty map otherwise.
 pub fn compile(
     pred: &Predicate,
     reg: &FieldRegistry,
     marked_selection_id: Option<i64>,
+    similar_vectors: &SimilarVectors,
 ) -> Result<CompiledQuery, CompileError> {
     let mut params = Vec::new();
-    let where_sql = compile_predicate(pred, reg, marked_selection_id, &mut params)?;
+    let where_sql =
+        compile_predicate(pred, reg, marked_selection_id, similar_vectors, &mut params)?;
     Ok(CompiledQuery {
         sql: format!("SELECT id FROM package WHERE {where_sql}"),
         params,
@@ -59,20 +74,23 @@ fn compile_predicate(
     pred: &Predicate,
     reg: &FieldRegistry,
     marked: Option<i64>,
+    similar_vectors: &SimilarVectors,
     params: &mut Vec<SqlValue>,
 ) -> Result<String, CompileError> {
     match pred {
-        Predicate::And(parts) => join_parts(parts, "AND", reg, marked, params),
-        Predicate::Or(parts) => join_parts(parts, "OR", reg, marked, params),
+        Predicate::And(parts) => join_parts(parts, "AND", reg, marked, similar_vectors, params),
+        Predicate::Or(parts) => join_parts(parts, "OR", reg, marked, similar_vectors, params),
         Predicate::Not(inner) => {
-            let inner_sql = compile_predicate(inner, reg, marked, params)?;
+            let inner_sql = compile_predicate(inner, reg, marked, similar_vectors, params)?;
             Ok(format!("NOT ({inner_sql})"))
         }
         Predicate::Compare { field, op, value } => compile_compare(field, *op, value, reg, params),
         Predicate::Match { field, pattern } => compile_match(field, pattern, reg, params),
         Predicate::FullText(text) => Ok(compile_fulltext(text, params)),
         Predicate::InSelection(sel) => compile_in_selection(sel, marked, params),
-        Predicate::Similar { .. } => Err(CompileError::SimilarNotSupported),
+        Predicate::Similar { text, threshold } => {
+            compile_similar(text, *threshold, similar_vectors, params)
+        }
     }
 }
 
@@ -84,11 +102,12 @@ fn join_parts(
     op: &str,
     reg: &FieldRegistry,
     marked: Option<i64>,
+    similar_vectors: &SimilarVectors,
     params: &mut Vec<SqlValue>,
 ) -> Result<String, CompileError> {
     let mut clauses = Vec::with_capacity(parts.len());
     for part in parts {
-        let clause = compile_predicate(part, reg, marked, params)?;
+        let clause = compile_predicate(part, reg, marked, similar_vectors, params)?;
         clauses.push(if matches!(part, Predicate::And(_) | Predicate::Or(_)) {
             format!("({clause})")
         } else {
@@ -227,6 +246,27 @@ fn compile_fulltext(text: &str, params: &mut Vec<SqlValue>) -> String {
     let escaped = text.replace('"', "\"\"");
     params.push(SqlValue::Text(format!("\"{escaped}\"")));
     "id IN (SELECT rowid FROM package_fts WHERE package_fts MATCH ?)".to_string()
+}
+
+/// `threshold` is a minimum cosine *similarity* (as parsed and documented —
+/// `docs/lang-bam-dsl.md`'s `similar:'text' > 0.82`), but sqlite-vec's
+/// `vec_distance_cosine` returns cosine *distance* (`1 - similarity`), so
+/// the bound parameter is `1 - threshold` and the comparison flips to `<=`.
+fn compile_similar(
+    text: &str,
+    threshold: f32,
+    similar_vectors: &SimilarVectors,
+    params: &mut Vec<SqlValue>,
+) -> Result<String, CompileError> {
+    let vector = similar_vectors
+        .get(text)
+        .ok_or_else(|| CompileError::MissingEmbedding(text.to_string()))?;
+    params.push(SqlValue::Blob(pack_vector(vector)));
+    params.push(SqlValue::Real(1.0 - threshold as f64));
+    Ok("EXISTS (SELECT 1 FROM package_embedding pe \
+         WHERE pe.package_id = package.id \
+         AND vec_distance_cosine(pe.vector, ?) <= ?)"
+        .to_string())
 }
 
 fn compile_in_selection(

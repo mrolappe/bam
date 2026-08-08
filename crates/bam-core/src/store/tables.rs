@@ -322,3 +322,70 @@ pub fn get_selection_member(
         },
     )
 }
+
+/// One package's embedding (P7.4). `vector` is packed/unpacked as raw
+/// little-endian float32 bytes on the way in/out — the layout
+/// `vec_distance_cosine` (sqlite-vec) reads directly, so a stored vector
+/// never needs re-encoding to be compared at query time.
+#[derive(Debug, Clone, PartialEq)]
+pub struct PackageEmbedding {
+    pub package_id: i64,
+    pub model: String,
+    pub dim: i64,
+    pub vector: Vec<f32>,
+}
+
+pub fn pack_vector(v: &[f32]) -> Vec<u8> {
+    v.iter().flat_map(|x| x.to_le_bytes()).collect()
+}
+
+pub fn unpack_vector(bytes: &[u8]) -> Vec<f32> {
+    bytes
+        .chunks_exact(4)
+        .map(|c| f32::from_le_bytes([c[0], c[1], c[2], c[3]]))
+        .collect()
+}
+
+/// Upserts by `package_id`: re-embedding (e.g. after a readme update) just
+/// replaces the row, matching `upsert_enrichment`'s reprocessing convention.
+pub fn upsert_package_embedding(conn: &Connection, row: &PackageEmbedding) -> Result<()> {
+    conn.execute(
+        "INSERT INTO package_embedding (package_id, model, dim, vector)
+         VALUES (?1, ?2, ?3, ?4)
+         ON CONFLICT(package_id) DO UPDATE SET
+           model = excluded.model,
+           dim = excluded.dim,
+           vector = excluded.vector",
+        params![row.package_id, row.model, row.dim, pack_vector(&row.vector)],
+    )?;
+    Ok(())
+}
+
+pub fn get_package_embedding(
+    conn: &Connection,
+    package_id: i64,
+) -> Result<Option<PackageEmbedding>> {
+    conn.query_row(
+        "SELECT package_id, model, dim, vector FROM package_embedding WHERE package_id = ?1",
+        params![package_id],
+        |row| {
+            let vector: Vec<u8> = row.get(3)?;
+            Ok(PackageEmbedding {
+                package_id: row.get(0)?,
+                model: row.get(1)?,
+                dim: row.get(2)?,
+                vector: unpack_vector(&vector),
+            })
+        },
+    )
+    .optional()
+}
+
+/// Any existing embedding's `dim`, used to detect a model switch (P7.4)
+/// before writing a vector of a different dimension into the same table.
+pub fn any_package_embedding_dim(conn: &Connection) -> Result<Option<i64>> {
+    conn.query_row("SELECT dim FROM package_embedding LIMIT 1", [], |row| {
+        row.get(0)
+    })
+    .optional()
+}

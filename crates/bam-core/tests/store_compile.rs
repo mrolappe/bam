@@ -2,6 +2,8 @@
 //! Phase 1 schema. `docs/lang-bam-dsl.md`'s worked examples are reused
 //! verbatim for the first group.
 
+use std::collections::HashMap;
+
 use bam_core::query::bam_dsl::BamDsl;
 use bam_core::query::ir::{FieldId, Pattern, Predicate};
 use bam_core::query::lang::QueryLanguage;
@@ -195,7 +197,8 @@ fn fixture() -> Fixture {
 }
 
 fn run(conn: &Connection, reg: &FieldRegistry, pred: &Predicate, marked: Option<i64>) -> Vec<i64> {
-    let compiled = compile(pred, reg, marked).unwrap_or_else(|e| panic!("compile failed: {e}"));
+    let compiled = compile(pred, reg, marked, &HashMap::new())
+        .unwrap_or_else(|e| panic!("compile failed: {e}"));
     let mut stmt = conn
         .prepare(&compiled.sql)
         .unwrap_or_else(|e| panic!("bad SQL {:?}: {e}", compiled.sql));
@@ -217,8 +220,9 @@ fn worked_examples_compile_and_return_expected_ids() {
     let lang = BamDsl;
     let [a, b, c, d, e, g, h, i, j] = f.ids;
 
-    // (source, expected ids). Example 9 (`similar:...`) is compile-rejected
-    // by design (P2.1/P7.4) — covered by `similar_is_rejected` below instead.
+    // (source, expected ids). Example 9 (`similar:...`) needs a resolved
+    // embedding to compile at all (P7.4) — covered by
+    // `similar_compiles_and_filters_by_threshold` below instead.
     // `j` (row 9, `UTIL/mod`, uploaded 2010) exists to prove GLOB is
     // case-sensitive (`glob_is_case_sensitive`, separately) — it's still a
     // real row here, so it shows up in any case that doesn't test `dir`.
@@ -263,7 +267,7 @@ fn literal_containing_sql_is_bound_not_interpolated() {
         op: bam_core::query::ir::CmpOp::Eq,
         value: bam_core::query::ir::Value::Text(malicious.to_string()),
     };
-    let compiled = compile(&pred, &reg, None).unwrap();
+    let compiled = compile(&pred, &reg, None, &HashMap::new()).unwrap();
     assert!(
         !compiled.sql.contains("DROP TABLE"),
         "the literal must not reach the SQL text: {}",
@@ -419,15 +423,67 @@ fn nested_not_or_parenthesizes_correctly() {
 }
 
 #[test]
-fn similar_is_rejected_as_not_yet_supported() {
+fn similar_without_a_resolved_embedding_is_a_clear_error() {
     let reg = FieldRegistry::new(package_fields());
     let pred = Predicate::Similar {
         text: "tracker module editor".into(),
         threshold: 0.82,
     };
-    let err = compile(&pred, &reg, None).unwrap_err();
+    let err = compile(&pred, &reg, None, &HashMap::new()).unwrap_err();
     assert!(
-        matches!(err, CompileError::SimilarNotSupported),
+        matches!(err, CompileError::MissingEmbedding(ref t) if t == "tracker module editor"),
         "got: {err:?}"
     );
+}
+
+/// P7.4: `Similar` compiles once its `text` is resolved to a vector, and
+/// its `threshold` filters — a package below threshold isn't returned, one
+/// above threshold is, regardless of keyword overlap with `text`.
+#[test]
+fn similar_compiles_and_filters_by_threshold() {
+    let f = fixture();
+    let reg = FieldRegistry::new(package_fields());
+    let [a, b, ..] = f.ids;
+
+    // `b` ("tracker module editor") is a near-identical vector to the
+    // query; `a` ("a nice utility") is a distant one — cosine similarity
+    // ~1.0 and ~0.0 respectively, not chosen to line up with any keyword.
+    tables::upsert_package_embedding(
+        &f.conn,
+        &tables::PackageEmbedding {
+            package_id: b,
+            model: "fake".into(),
+            dim: 3,
+            vector: vec![1.0, 0.0, 0.0],
+        },
+    )
+    .unwrap();
+    tables::upsert_package_embedding(
+        &f.conn,
+        &tables::PackageEmbedding {
+            package_id: a,
+            model: "fake".into(),
+            dim: 3,
+            vector: vec![0.0, 1.0, 0.0],
+        },
+    )
+    .unwrap();
+
+    let pred = Predicate::Similar {
+        text: "tracker module editor".into(),
+        threshold: 0.5,
+    };
+    let mut vectors = HashMap::new();
+    vectors.insert("tracker module editor".to_string(), vec![1.0, 0.0, 0.0]);
+    let compiled = compile(&pred, &reg, None, &vectors).unwrap();
+    let mut stmt = f.conn.prepare(&compiled.sql).unwrap();
+    let ids: Vec<i64> = stmt
+        .query_map(rusqlite::params_from_iter(compiled.params.iter()), |r| {
+            r.get(0)
+        })
+        .unwrap()
+        .map(Result::unwrap)
+        .collect();
+
+    assert_eq!(ids, vec![b], "only the near-identical vector passes threshold 0.5");
 }

@@ -72,10 +72,10 @@ pub enum Predicate {
     /// `description LIKE` fallback until P4.6's FTS5 table exists.
     FullText(String),
     InSelection(SelectionRef),
-    /// Parsed and type-checked from the start; rejected with "not yet
-    /// supported" by the compiler until P7.4 implements vector similarity.
-    /// Reserving the node now avoids invalidating every generated grammar
-    /// and few-shot prompt example once P7.4 lands.
+    /// `threshold` is a minimum cosine similarity (P7.4). Compiles only if
+    /// the caller resolves `text` to an embedding first — the compiler
+    /// stays synchronous, so it can't call an `LlmProvider` itself
+    /// (`store::compile::SimilarVectors`, `CompileError::MissingEmbedding`).
     Similar {
         text: String,
         threshold: f32,

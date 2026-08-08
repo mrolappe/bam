@@ -74,6 +74,7 @@ fn db_at_version_n_only_runs_migrations_above_n() {
             "landing_index_line".to_string(),
             "landing_readme".to_string(),
             "package".to_string(),
+            "package_embedding".to_string(),
             "package_fts".to_string(),
             "package_fts_config".to_string(),
             "package_fts_data".to_string(),

@@ -1,6 +1,8 @@
 //! P4.6: the FTS5 full-text index over `package.description` and readme
 //! text, matching the phase doc's five test bullets exactly.
 
+use std::collections::HashMap;
+
 use bam_core::query::ir::Predicate;
 use bam_core::query::registry::FieldRegistry;
 use bam_core::store::compile::compile;
@@ -45,7 +47,7 @@ fn insert_readme(conn: &Connection, package_id: i64, url: &str, text: &str) {
 
 fn search_ids(conn: &Connection, term: &str) -> Vec<i64> {
     let reg = FieldRegistry::new(bam_core::query::registry::package_fields());
-    let query = compile(&Predicate::FullText(term.to_string()), &reg, None).unwrap();
+    let query = compile(&Predicate::FullText(term.to_string()), &reg, None, &HashMap::new()).unwrap();
     let mut stmt = conn.prepare(&query.sql).unwrap();
     let mut ids: Vec<i64> = stmt
         .query_map(rusqlite::params_from_iter(&query.params), |row| row.get(0))
@@ -158,6 +160,7 @@ fn fulltext_compiles_to_an_fts5_match_not_like() {
         &Predicate::FullText("tracker module editor".to_string()),
         &reg,
         None,
+        &HashMap::new(),
     )
     .unwrap();
 
