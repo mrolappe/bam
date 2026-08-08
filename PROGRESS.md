@@ -208,6 +208,57 @@ versioning so a plugin upgrade reprocesses only its own rows.
 
 ---
 
+## Round 53 — 2026-08-08 · Phase 8: `content_analyzer` extension point (P8.3)
+
+`WasmContentAnalyzer` (`bam_core::plugin::wasm`, native-only): loads a
+`content_analyzer` manifest/`plugin.wasm` pair the same way P8.2's
+`WasmUnpacker` does, and calls its `analyze` export per file. The output is
+read as a raw string and `serde_json`-parsed on the host rather than through
+extism's typed `Json<T>` convert on the guest side, so a plugin returning
+malformed JSON surfaces as `AnalyzeError::MalformedOutput` instead of a
+panic — same trust posture as P8.2's unpacker (I4: a plugin is less trusted
+than in-tree code).
+
+`bam_core::store::content_analysis::analyze_files` is the DB half: one
+`enrichment` row per `(package, plugin, file)` — `kind =
+"content_analyzer:{plugin_id}:{path}"` — so bumping a plugin's version
+reprocesses only that plugin's rows for the files it claims, never another
+plugin's rows or `llm_summary` (checked directly by a test that seeds a
+summary row, reprocesses the analyzer twice with different plugin versions,
+and asserts the summary payload is untouched). `claims` prefiltering
+(P8.1) happens in this function, before any WASM call, so an unclaimed file
+is never handed to the plugin. `producer_version`'s column is `INTEGER`
+but a plugin's version is a free-form string; `analyze_files` hashes it with
+`DefaultHasher::new()` (fixed keys, so deterministic across runs) rather
+than adding a second version-comparison column to the shared `enrichment`
+table.
+
+`store::fts::rebuild_fts` gained a third `package_fts` column,
+`content_analysis`, populated by concatenating `searchable_text` out of
+every package's `content_analyzer:*` enrichment payloads — P4.6's
+whole-row `MATCH` needed no compiler change to pick it up.
+
+Test fixture: `tests/fixtures/plugins/echo-analyzer/` — a real
+`extism-pdk` WASM plugin (source under `src-provenance/`, same convention
+as P8.2's echo-unpacker) that classifies any `.mod` file as `kind: "echo"`
+with `searchable_text` from its decoded bytes, and deliberately returns
+malformed JSON for a path ending `broken.mod` to exercise the host's error
+path. 5 tests added (258 total): FTS5 discovery of a classified file's
+`searchable_text`, plugin name/version stored as producer, version-bump
+reprocessing that leaves `llm_summary` untouched, malformed output
+reported and skipped without writing a row, and `claims` prefiltering
+proven by the unclaimed file never producing an enrichment row.
+
+Both extension points named in §9 (`unpacker`, P8.2; `content_analyzer`,
+P8.3) now have a working WASM backend through the plugin host.
+
+**Next:** P8.4, a WASM-backed unpacker doing real archive extraction (vs.
+P8.2's echo fixture) — proving I4 against a second extension point end to
+end, including format routing and path-traversal rejection inside the
+sandbox.
+
+---
+
 ## Decisions carried forward
 
 The eight architectural invariants are stated in full in

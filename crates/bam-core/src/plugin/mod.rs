@@ -101,6 +101,20 @@ pub struct UnpackProbeResponse {
     pub reason: Option<String>,
 }
 
+/// Output of a `content_analyzer` plugin's `analyze` export for one file.
+/// The host, not the plugin, deserializes this from a raw string rather
+/// than through extism's typed `Json<T>` convert — a plugin's output is
+/// untrusted the same way its unpacked bytes are (I4), so malformed JSON
+/// must become a reportable, skippable error rather than a host panic.
+#[derive(Debug, Clone, Serialize, Deserialize, JsonSchema)]
+pub struct ContentAnalyzerOutput {
+    pub kind: String,
+    pub confidence: f64,
+    #[serde(default)]
+    pub attributes: Value,
+    pub searchable_text: String,
+}
+
 /// Returns the JSON Schema for `extension_point`'s input contract, `None`
 /// for a point the host doesn't recognise. Generated straight from the
 /// Rust type via `schemars`, so the published schema cannot drift from what
@@ -120,4 +134,4 @@ pub fn contract_schema(extension_point: &str) -> Option<Value> {
 #[cfg(feature = "native")]
 mod wasm;
 #[cfg(feature = "native")]
-pub use wasm::{PluginLoadError, WasmUnpacker};
+pub use wasm::{AnalyzeError, PluginLoadError, WasmContentAnalyzer, WasmUnpacker};

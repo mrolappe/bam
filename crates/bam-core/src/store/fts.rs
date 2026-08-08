@@ -8,11 +8,14 @@ use rusqlite::{Connection, Result, params};
 
 use crate::ingest::charset::decode;
 
-const FTS_DDL: &str =
-    "CREATE VIRTUAL TABLE package_fts USING fts5(description, readme_text, content='')";
+use super::content_analysis::CONTENT_ANALYZER_KIND_PREFIX;
 
-/// Drops and repopulates `package_fts` from the current `package` and
-/// `landing_readme` tables. Returns the number of packages indexed.
+const FTS_DDL: &str = "CREATE VIRTUAL TABLE package_fts USING \
+     fts5(description, readme_text, content_analysis, content='')";
+
+/// Drops and repopulates `package_fts` from the current `package`,
+/// `landing_readme`, and `content_analyzer:*` enrichment (P8.3) rows.
+/// Returns the number of packages indexed.
 pub fn rebuild_fts(conn: &Connection) -> Result<usize> {
     conn.execute("DROP TABLE IF EXISTS package_fts", [])?;
     conn.execute_batch(FTS_DDL)?;
@@ -24,9 +27,14 @@ pub fn rebuild_fts(conn: &Connection) -> Result<usize> {
     drop(pkg_stmt);
 
     let mut readme_stmt = conn.prepare("SELECT raw FROM landing_readme WHERE package_id = ?1")?;
-    let mut insert_stmt = conn
-        .prepare("INSERT INTO package_fts (rowid, description, readme_text) VALUES (?1, ?2, ?3)")?;
+    let mut analysis_stmt =
+        conn.prepare("SELECT payload FROM enrichment WHERE package_id = ?1 AND kind LIKE ?2")?;
+    let mut insert_stmt = conn.prepare(
+        "INSERT INTO package_fts (rowid, description, readme_text, content_analysis)
+         VALUES (?1, ?2, ?3, ?4)",
+    )?;
 
+    let kind_pattern = format!("{CONTENT_ANALYZER_KIND_PREFIX}%");
     for (id, description) in &packages {
         let raws: Vec<Vec<u8>> = readme_stmt
             .query_map(params![id], |row| row.get(0))?
@@ -37,7 +45,17 @@ pub fn rebuild_fts(conn: &Connection) -> Result<usize> {
             .collect::<Vec<_>>()
             .join("\n");
 
-        insert_stmt.execute(params![id, description, readme_text])?;
+        let payloads: Vec<String> = analysis_stmt
+            .query_map(params![id, kind_pattern], |row| row.get(0))?
+            .collect::<Result<_>>()?;
+        let content_analysis = payloads
+            .iter()
+            .filter_map(|payload| serde_json::from_str::<serde_json::Value>(payload).ok())
+            .filter_map(|v| v["searchable_text"].as_str().map(str::to_string))
+            .collect::<Vec<_>>()
+            .join("\n");
+
+        insert_stmt.execute(params![id, description, readme_text, content_analysis])?;
     }
 
     Ok(packages.len())

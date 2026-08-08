@@ -8,6 +8,7 @@ use std::os::raw::c_char;
 
 pub mod blob_cache;
 pub mod compile;
+pub mod content_analysis;
 pub mod embeddings;
 pub mod fetch;
 pub mod fetch_queue;

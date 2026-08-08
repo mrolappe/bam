@@ -17,18 +17,29 @@ use thiserror::Error;
 use crate::blob::{BlobHash, BlobStore};
 use crate::unpack::{ArchiveFormat, Availability, ExtractedFile, UnpackError, Unpacker};
 
-use super::{ManifestError, PluginManifest, UnpackProbeResponse, UnpackRequest, UnpackResponse};
+use super::{
+    ContentAnalyzerInput, ContentAnalyzerOutput, ManifestError, PluginManifest,
+    UnpackProbeResponse, UnpackRequest, UnpackResponse,
+};
 
 #[derive(Debug, Error)]
 pub enum PluginLoadError {
     #[error("plugin manifest: {0}")]
     Manifest(#[from] ManifestError),
-    #[error("plugin extension_point '{found}' is not 'unpacker'")]
-    WrongExtensionPoint { found: String },
+    #[error("plugin extension_point '{found}' is not '{expected}'")]
+    WrongExtensionPoint { found: String, expected: String },
     #[error("io error loading plugin: {0}")]
     Io(#[from] std::io::Error),
     #[error("failed to load wasm module: {0}")]
     Wasm(String),
+}
+
+#[derive(Debug, Error)]
+pub enum AnalyzeError {
+    #[error("plugin call failed: {0}")]
+    Wasm(String),
+    #[error("plugin returned malformed JSON: {0}")]
+    MalformedOutput(#[from] serde_json::Error),
 }
 
 /// A WASM-backed [`Unpacker`], loaded from `dir/manifest.toml` +
@@ -56,6 +67,7 @@ impl<S: BlobStore> WasmUnpacker<S> {
         if manifest.extension_point != "unpacker" {
             return Err(PluginLoadError::WrongExtensionPoint {
                 found: manifest.extension_point,
+                expected: "unpacker".to_string(),
             });
         }
         let wasm_bytes = fs::read(dir.join("plugin.wasm"))?;
@@ -137,5 +149,65 @@ impl<S: BlobStore> Unpacker for WasmUnpacker<S> {
             });
         }
         Ok(files)
+    }
+}
+
+/// A WASM-backed `content_analyzer` plugin (P8.3), loaded the same way as
+/// [`WasmUnpacker`]. It has no [`BlobStore`] — the host, not the plugin,
+/// decides which extracted files to feed it and passes their bytes
+/// directly, one call per file.
+pub struct WasmContentAnalyzer {
+    manifest: PluginManifest,
+    plugin: Mutex<extism::Plugin>,
+}
+
+impl WasmContentAnalyzer {
+    pub fn load(dir: &Path) -> Result<Self, PluginLoadError> {
+        let manifest_src = fs::read_to_string(dir.join("manifest.toml"))?;
+        let manifest = PluginManifest::parse(&manifest_src)?;
+        if manifest.extension_point != "content_analyzer" {
+            return Err(PluginLoadError::WrongExtensionPoint {
+                found: manifest.extension_point,
+                expected: "content_analyzer".to_string(),
+            });
+        }
+        let wasm_bytes = fs::read(dir.join("plugin.wasm"))?;
+        let plugin = extism::Plugin::new(&wasm_bytes, [], true)
+            .map_err(|e| PluginLoadError::Wasm(e.to_string()))?;
+        Ok(Self {
+            manifest,
+            plugin: Mutex::new(plugin),
+        })
+    }
+
+    pub fn id(&self) -> &str {
+        &self.manifest.name
+    }
+
+    pub fn version(&self) -> &str {
+        &self.manifest.version
+    }
+
+    /// `claims` pre-filtering (P8.1): whether this plugin should even be
+    /// offered `filename` — the host's job to check before calling
+    /// [`Self::analyze`], not the plugin's.
+    pub fn claims_file(&self, filename: &str) -> bool {
+        self.manifest.claims_file(filename)
+    }
+
+    /// Calls the plugin's `analyze` export. The output is read as a raw
+    /// string and parsed here, rather than through extism's typed `Json<T>`
+    /// convert on the guest side, so a plugin returning malformed JSON
+    /// surfaces as [`AnalyzeError::MalformedOutput`] instead of a host
+    /// panic (I4: a plugin is less trusted than in-tree code).
+    pub fn analyze(
+        &self,
+        input: &ContentAnalyzerInput,
+    ) -> Result<ContentAnalyzerOutput, AnalyzeError> {
+        let mut plugin = self.plugin.lock().expect("plugin mutex poisoned");
+        let raw: String = plugin
+            .call("analyze", Json(input))
+            .map_err(|e| AnalyzeError::Wasm(e.to_string()))?;
+        Ok(serde_json::from_str(&raw)?)
     }
 }
