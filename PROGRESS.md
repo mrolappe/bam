@@ -273,33 +273,75 @@ left as a warning). `cargo build -p bam-core --no-default-features
 change lives under `store`, already entirely `native`-gated;
 `sqlite-vec` is `native`-only in `Cargo.toml`, same as `rusqlite`).
 
+## Round 39 — 2026-08-08 · Phase 7: LLM summaries (P7.5, Phase 7 exit)
+
+`crates/bam-core/src/store/summaries.rs` (new): `kind = "llm_summary"`
+enrichment, mirroring P7.4's `embeddings::run_batch` shape exactly —
+`pending()` selects packages with a landed readme but no enrichment row at
+the current `SUMMARY_PRODUCER_VERSION`, `run_batch` processes up to
+`batch_size` of them per call, so an interrupted run resumes for free (the
+next call's `pending()` just excludes whatever the previous call already
+wrote). Unlike embeddings' single batched `embed` call, each package gets
+its own `LlmProvider::complete` call — summaries are per-package prose, not
+a batchable vector op — so a provider error on one package is caught into
+`SummaryOutcome::failed` and the rest of the batch still runs, rather than
+propagating and aborting everything after it.
+
+Summary input is readme text plus, when an inventory enrichment (P5.8)
+exists for the package, its file listing (`get_enrichment(..., INVENTORY_KIND)`
+decoded back to `Inventory`) — both go into one prompt. Selection scoping
+(I7) is a plain `package_ids: Option<&[i64]>` parameter on `pending`/
+`run_batch`; resolving a selection name to ids is left to the caller
+(`Session::search_packages`), the same division `store::compile` already
+draws between the pure query layer and session-level context resolution —
+`summaries.rs` has no dependency on `Session` or the query IR at all.
+
+§16's cost-visibility requirement: `estimate_run` scans the *whole* pending
+backlog (not just one batch) and reports package count, an estimated token
+count (chars/4 — no `LlmProvider` exposes a real tokenizer, so this is a
+`ponytail:`-flagged heuristic ceiling), and, when a `cost_per_1k_tokens`
+price is passed, an estimated cost (`None` for local/free providers).
+`run_batch` takes a `confirmed: bool` gate and returns
+`SummaryError::ConfirmationRequired` without calling the provider at all
+when `false` — a structural requirement that the caller obtained and showed
+the estimate first, not just a documented convention.
+
+`crates/bam-core/tests/store_summaries.rs`: interrupted/resumed run over
+100 packages across four `batch_size = 40` calls (40/40/20/0); bumping
+`producer_version` reprocesses a stale row while leaving it alone does not;
+`estimate_run`'s token/cost numbers are asserted directly and an
+unconfirmed `run_batch` call makes zero provider calls; a two-id selection
+touches exactly those two packages and leaves a third alone; one failing
+package (matched by a provider error trigger) doesn't block the other two
+in the same batch, and is reported in `failed` rather than silently
+dropped. All five of P7.5's tests pass, matching phase-7-llm.md's list
+one-to-one. `cargo clippy --workspace --all-targets` clean. `cargo build -p
+bam-core --no-default-features --target wasm32-unknown-unknown` still
+compiles (I1 holds — `summaries.rs` lives entirely under `store`, already
+native-gated the same way `embeddings.rs` and `inventory.rs` are). 208
+tests total across the workspace (5 added).
+
+**Phase 7 exit reached.** Natural-language search that emits inspectable
+DSL (P7.3), semantic similarity (P7.4), and now summaries (P7.5) — all
+runnable entirely locally against a llama.cpp server, per §10's hard
+requirement.
+
 ## Next task
 
-**P7.5 — LLM summaries** ([phase-7-llm.md](docs/plan/phase-7-llm.md)):
-`kind = 'llm_summary'` enrichment from readme plus inventory. Rate limited,
-resumable, targetable at a selection (I7), and cost-visible before a bulk
-run starts (§16). Marked **S**.
+Phase 7 is closed. Phases 6, 8, 9 are all still open and unscheduled
+(additive, resequenceable per `IMPLEMENTATION_PLAN.md`'s phase table):
+Phase 6 is the launcher registry + FS-UAE (4 tasks), Phase 8 is the extism
+WASM plugin host (5 tasks), Phase 9 is the Vue/`bam-server`/Tauri frontends
+(7 tasks). None has been started. Confirm with the user which to pick up
+next before starting — the resolved open questions (bottom of this file)
+already settled FS-UAE-first for Phase 6 and Vue for Phase 9's frontend, so
+either is ready to scope into a round without further design discussion.
 
-What Round 38 leaves ready to build on:
-- `store::embeddings::run_batch`'s one-step-per-call shape and its
-  `NOT EXISTS`-against-the-output-table resumability pattern are the
-  template P7.5's own resumable batch run can reuse directly.
-- `tables::upsert_enrichment`'s `producer_version` reprocessing convention
-  (P5.8) is exactly what P7.5's "bumping `producer_version` reprocesses"
-  test needs — already built, not new for this phase.
-- `Similar` is real now: a future frontend wiring natural-language search
-  end-to-end needs to resolve query text to a vector (one `embed` call)
-  before calling `store::compile::compile`, then supply it as
-  `SimilarVectors` — no `Session` API change required to do that from the
-  caller's side.
-
-Still true from Round 35, unclaimed by this round:
-- **P2.7's selection API** (I7) is what P7.5 targets a summarisation run at.
-- **The `enrichment` table plus `upsert_enrichment`** (P5.8) is P7.5's
-  `kind = 'llm_summary'` producer's mechanism.
-
-§16's cost-visibility requirement (P7.5) remains a hard requirement worth
-keeping in view — now due.
+Still true from Round 35, now fully claimed:
+- P2.7's selection API (I7) is what P7.5 targets a summarisation run at —
+  done via the `package_ids` parameter, no `Session` change needed.
+- The `enrichment` table plus `upsert_enrichment` (P5.8) is P7.5's
+  `kind = 'llm_summary'` producer's mechanism — done.
 
 ---
 

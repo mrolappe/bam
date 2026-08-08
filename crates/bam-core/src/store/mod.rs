@@ -20,6 +20,7 @@ mod migrations;
 pub mod normalize;
 pub mod recent;
 pub mod session;
+pub mod summaries;
 pub mod tables;
 
 pub use migrations::apply_migrations;
