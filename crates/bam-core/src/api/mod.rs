@@ -22,6 +22,7 @@
 
 pub mod ingest;
 pub mod query;
+pub mod schema;
 pub mod selection;
 pub mod types;
 

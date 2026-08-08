@@ -15,7 +15,7 @@ pub enum Outcome {
     Failed { message: String },
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize, JsonSchema)]
 pub enum ProgressEvent {
     Started {
         operation: OperationId,

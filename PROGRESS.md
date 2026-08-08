@@ -136,14 +136,32 @@ phase doc's four P6.4 tests target the core batch behavior only.
 
 ---
 
-## Next task
+## Round 44 — 2026-08-08 · Phase 9: Vue frontend and transport interface (P9.1)
 
-**Phase 9** (Vue/`bam-server`/Tauri frontends, 7 tasks) is next, chosen over
-Phase 8 (extism WASM plugin host, 5 tasks) — both are additive and
-resequenceable per `IMPLEMENTATION_PLAN.md`'s phase table, neither blocks
-the other, this is a scheduling choice, not a dependency. See
-[phase-9-frontends.md](docs/plan/phase-9-frontends.md) for its task list
-before starting. Phase 8 remains open and unscheduled behind it.
+One `frontend/` package (Vue 3, `<script setup>` + TypeScript, Vite) with a
+`BamClient` interface as the only seam components use — `TauriClient` and
+`HttpClient` implement it, neither imported by anything under `components/`.
+Request/response types are generated, not hand-written: `bam-core::api`
+gained a `schema` module (`all_schemas()`, mirroring P7.2's
+`bam_dsl_json_schema` pattern) and an `export_api_schema` example that
+prints it as JSON; `frontend/scripts/gen-types.mjs` turns that into
+`src/generated/types.ts` via `json-schema-to-typescript`, merging every
+type's independent `schema_for!` output into one shared `definitions` map
+first so shared types (`Predicate`, `Package`, ...) don't get emitted once
+per referencing root and collide.
+
+All five of P9.1's required tests pass: a `PackageList` component test
+against a mock `BamClient` with no real transport present; one contract
+suite (`describe.each`) run against both `HttpClient` and `TauriClient`,
+covering request/response shape and progress-stream termination on both
+`Finished` and `AbortSignal`; a staleness test that regenerates the types
+in-memory and diffs against the checked-in file; and a grep-style test
+over every file under `components/` rejecting `@tauri-apps/api` and direct
+`fetch(` calls. CI gained a `frontend` job running `npm run typecheck` and
+`npm test`. 230 Rust tests, 11 frontend tests.
+
+**Next:** P9.2, the `bam-server` HTTP/SSE adapter that gives `HttpClient` a
+real backend to talk to (currently only exercised against mocks).
 
 ---
 
