@@ -259,6 +259,38 @@ sandbox.
 
 ---
 
+## Round 54 — 2026-08-08 · Phase 8: WASM-backed unpacker with real archive extraction (P8.4)
+
+`tests/fixtures/plugins/zip-unpacker/`: a real `extism-pdk` WASM plugin
+(source under `src-provenance/`, same convention as P8.2/P8.3's fixtures)
+that reads genuine ZIP archives via the `zip` crate inside WASM — the first
+plugin fixture that does real format parsing rather than echoing bytes back.
+Registers into `UnpackerRegistry` and is selected through `detect_format`'s
+ordinary magic-byte routing (P5.3), unchanged by P8.2. A second fixture,
+`unavailable-unpacker/`, always reports itself unavailable, isolating the
+probe-honoured test from the extraction test — P8.2 only ever exercised the
+available path.
+
+Extracting this fixture surfaced a real gap: `WasmUnpacker::unpack`
+(`bam_core::plugin::wasm`) wrote each returned file to `dest` as it decoded
+it, so a malicious entry ordered after a safe one left partial output behind
+— unlike `unar`/`zip`'s scratch-then-move pattern (P5.4/P5.5), which never
+had this exposure. Fixed by validating every entry's path and base64 first,
+then writing only once the whole batch decodes clean — same no-partial-
+extraction guarantee as the native backends, extended to plugins even though
+the sandbox itself is per-call rather than per-file. 4 tests added (262
+total): real extraction against a two-file fixture, magic-byte routing
+through the unchanged registry, a `probe`-honoured negative case via
+`unavailable-unpacker`, and traversal rejection with the fixed atomicity
+verified directly (`dest` empty after the error).
+
+**Next:** P8.5, plugin loading configuration and failure isolation — the
+phase's last task: panics, time limits, and memory limits caught per-plugin
+without taking down the host, plugin discovery/enable config, and a plugin
+that fails to load reported at startup without blocking it.
+
+---
+
 ## Decisions carried forward
 
 The eight architectural invariants are stated in full in

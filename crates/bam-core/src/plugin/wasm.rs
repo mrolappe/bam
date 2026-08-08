@@ -121,16 +121,21 @@ impl<S: BlobStore> Unpacker for WasmUnpacker<S> {
                 })?;
         drop(plugin);
 
-        fs::create_dir_all(dest)?;
-        let mut files = Vec::with_capacity(resp.files.len());
-        for f in resp.files {
+        // Validate every entry (path traversal, base64) before writing any
+        // of them, so a malicious entry found after a safe one leaves no
+        // partial output behind — the same guarantee `unar`/`zip` hold via
+        // their scratch-then-move pattern (P5.4/P5.5).
+        let mut decoded = Vec::with_capacity(resp.files.len());
+        for f in &resp.files {
             let rel = Path::new(&f.path);
             if rel.is_absolute()
                 || rel
                     .components()
                     .any(|c| c == std::path::Component::ParentDir)
             {
-                return Err(UnpackError::PathTraversal { entry: f.path });
+                return Err(UnpackError::PathTraversal {
+                    entry: f.path.clone(),
+                });
             }
             let content =
                 BASE64
@@ -138,13 +143,19 @@ impl<S: BlobStore> Unpacker for WasmUnpacker<S> {
                     .map_err(|e| UnpackError::ExtractionFailed {
                         message: format!("plugin returned invalid base64 for '{}': {e}", f.path),
                     })?;
-            let target = dest.join(rel);
+            decoded.push((rel.to_path_buf(), content));
+        }
+
+        fs::create_dir_all(dest)?;
+        let mut files = Vec::with_capacity(decoded.len());
+        for (rel, content) in decoded {
+            let target = dest.join(&rel);
             if let Some(parent) = target.parent() {
                 fs::create_dir_all(parent)?;
             }
             fs::write(&target, &content)?;
             files.push(ExtractedFile {
-                path: rel.to_path_buf(),
+                path: rel,
                 size: content.len() as u64,
             });
         }

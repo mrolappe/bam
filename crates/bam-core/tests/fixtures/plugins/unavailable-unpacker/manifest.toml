@@ -1,0 +1,5 @@
+name = "unavailable-unpacker"
+version = "0.1.0"
+api_version = 1
+extension_point = "unpacker"
+claims = ["*.zip"]
