@@ -16,7 +16,7 @@
 
 use std::fs;
 
-use bam_core::unpack::{HeaderLevel, ProtectionBits, parse_lha_header};
+use bam_core::unpack::{HeaderLevel, ProtectionBits, list_headers, parse_lha_header};
 
 fn fixture(name: &str) -> Vec<u8> {
     fs::read(format!("tests/fixtures/archives/{name}")).unwrap()
@@ -144,4 +144,44 @@ fn truncated_amiga_extension_chain_errors_rather_than_panicking() {
     bytes[30] = 1;
     bytes[31] = 0;
     assert!(parse_lha_header(&bytes).is_err());
+}
+
+/// Builds one synthetic level-0 header (no Amiga extension) for `filename`
+/// immediately followed by `data`, with `compressed_size` set to
+/// `data.len()` — the shape `list_headers` needs to skip to the next entry.
+fn synthetic_level0_entry(filename: &str, data: &[u8]) -> Vec<u8> {
+    let filename = filename.as_bytes();
+    let mut header = vec![
+        0u8, 0, // header size, checksum (patched below)
+        b'-', b'l', b'h', b'0', b'-', // method
+    ];
+    header.extend_from_slice(&(data.len() as u32).to_le_bytes()); // compressed size
+    header.extend_from_slice(&0u32.to_le_bytes()); // original size
+    header.extend_from_slice(&0u32.to_le_bytes()); // timestamp
+    header.push(0x20); // attribute
+    header.push(0); // level 0
+    header.push(filename.len() as u8);
+    header.extend_from_slice(filename);
+    header.extend_from_slice(&[0, 0]); // CRC
+    let header_size = header.len() - 2;
+    header[0] = header_size as u8;
+    header.extend_from_slice(data);
+    header
+}
+
+#[test]
+fn list_headers_walks_multiple_entries_by_skipping_compressed_data() {
+    let mut bytes = synthetic_level0_entry("a.txt", b"hello");
+    bytes.extend(synthetic_level0_entry("b.txt", b"world!"));
+    bytes.push(0); // terminator
+
+    let headers = list_headers(&bytes);
+    let names: Vec<&str> = headers.iter().map(|h| h.filename.as_str()).collect();
+    assert_eq!(names, vec!["a.txt", "b.txt"]);
+}
+
+#[test]
+fn list_headers_on_terminator_only_bytes_returns_empty() {
+    let bytes = vec![0u8, 1, 2, 3];
+    assert!(list_headers(&bytes).is_empty());
 }

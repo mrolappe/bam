@@ -127,29 +127,80 @@ instead of silently falling back. 6 tests in `tests/launch.rs` cover the
 phase doc's five plus config-override-wins. 214 tests total (6 added).
 `cargo fmt`, `clippy`, and the wasm32 build all clean.
 
+## Round 41 — 2026-08-08 · Phase 6: FS-UAE launcher (P6.2)
+
+`crates/bam-core/src/launch/fs_uae.rs` adds `FsUaeLauncher<S: BlobStore>`:
+extracts an archive to a scratch directory via the P5.3 `UnpackerRegistry`,
+writes `.uaem` sidecars (P5.7's `write_sidecar`) for entries whose LHA
+header carried Amiga protection/comment data, renders an FS-UAE config
+(`hard_drive_0 = <scratch>/volume`, FS-UAE's own documented directory-as-
+hard-drive support), and spawns `fs-uae` against it. `probe`/`launch` take
+their binary candidates via `with_candidates` (default: per-platform
+hardcoded paths) rather than baking in real system paths, so both are
+testable without a real FS-UAE install.
+
+Getting sidecars right needed one gap closed first: nothing previously
+walked a *multi-entry* LHA archive — only `parse_lha_header` for one header
+at a time existed. `unpack::lha_header` gained a `compressed_size` field
+(the header's own documented base-layout field, offset 7..11, common to all
+three levels) and `list_headers`, which repeatedly parses-and-skips to
+collect every entry's header; `launch()` reads the archive's raw bytes back
+out of the `BlobStore`, walks them, and matches entries to extracted files
+by filename.
+
+`LaunchRequest` gained `archive: Option<LaunchArchive>` (blob hash +
+format — P6.1 only exercised capability-based selection, never what to
+launch) and `LaunchHandle` gained `scratch_dir: Option<PathBuf>` with a
+`Drop` impl that removes it, so a launched archive's extracted copy doesn't
+outlive the handle. Both changes are additive; all six P6.1 tests still
+pass unchanged bar two struct-literal updates for the new fields.
+
+6 new automated tests (4 in `tests/launch_fs_uae.rs` per the phase doc's
+list, plus 2 covering `list_headers` in `tests/unpack_lha_header.rs`) —
+220 passing total, up from 214, plus the one `#[ignore]`d manual test
+below. `cargo fmt`, `cargo clippy --workspace --all-targets -- -D
+warnings`, and the wasm32 `--no-default-features` build are all clean.
+
+**Manual test — run, 2026-08-08. Script ran; the attribute round-trip did
+not get validated — a real gap found, not closed.** FS-UAE turned out to
+already be installed locally (`/Applications/FS-UAE.app/...` — `probe()`'s
+default candidates found it; `which fs-uae` alone missed it since it ships
+as a `.app` bundle, not on `PATH`). The fixture at
+`tests/fixtures/archives/startup_sequence.lha` (`s/startup-sequence`,
+`echo "bam!"`) is genuinely Amiga-built — packed with `lha`/`lharc` running
+inside FS-UAE itself, not a host tool. `manual_launch_runs_the_startup_sequence_script`
+launched FS-UAE and the script **did run**, confirmed visually.
+
+But tracing what `list_headers` actually read from this real archive's
+bytes shows why that pass doesn't mean what it looks like it means:
+`LhaFileHeader { protection: None, comment: None, .. }`. The header's
+level-1 extended-header chain holds a directory-name block (type `0x02`,
+"s") and a 2-byte block of type `0x00` — almost certainly the
+generic LHA header-CRC extension every `lha` build emits, not Amiga
+protection data. Neither matches `AMIGA_EXT_TYPE = 0x47`, the placeholder
+guess `unpack::lha_header`'s module doc has flagged since Round 32 as
+"untested against real Amiga data." With `protection`/`comment` both
+`None`, `write_sidecars` wrote **no `.uaem` sidecar** — the script running
+anyway is best explained by FS-UAE's synthesized directory volume
+defaulting an attribute-less extracted file to executable-permitted (the
+same default AmigaDOS itself uses for a file with no recorded protection),
+not by the sidecar mechanism working. **First real evidence the
+`AMIGA_EXT_TYPE`/`AMIGA_OS_ID` placeholder is wrong** (or at least doesn't
+match what this Amiga-native `lha` produces) — real data the module
+previously had none of, but the actual protection-bit extension format is
+still unknown. Left as a known, flagged gap rather than guessed at further;
+`tests/fixtures/archives/startup_sequence.lha` is committed as a real data
+point for whoever picks this up (try an archive with `Protect FILE -e` run
+first and diff the header bytes against this one).
+
 ## Next task
 
-**P6.2 — FS-UAE launcher** ([phase-6-launchers.md](docs/plan/phase-6-launchers.md)):
-extract an archive to scratch (P5.4/P5.5), write `.uaem` sidecars (P5.7),
-generate an FS-UAE config pointing a directory volume at it, spawn the
-process. FS-UAE runs on both macOS and Linux, which is why it's first.
-
-**Tests first** (phase-6-launchers.md's own list):
-- Generated config for a known request matches an expected fixture, field
-  for field.
-- `probe` finds FS-UAE at the platform default path and reports
-  unavailable when absent.
-- `capabilities()` reports `directory_volume: true`, `uaem_sidecars: true`.
-- Scratch directories are cleaned up when the handle is dropped.
-- One `#[ignore]`d manual test: launching an archive containing a
-  startup-sequence script shows the script **running** — the real
-  end-to-end check of whether P5.6 and P5.7 actually worked. Do not skip
-  running it manually once; record the result here.
-
-**Done when:** the four automated tests pass; the ignored one is run
-manually once and its result recorded in `PROGRESS.md`. Phase 6 continues
-with P6.3 (`bam.toml` launcher config, H), P6.4 (launch a selection, S) —
-see the phase doc for each.
+Phase 6 continues with **P6.3** (`bam.toml` launcher config: binary path,
+extra args, scratch directory, preference order, per-platform default
+candidate paths — `H`) and **P6.4** (launch a selection, iterating I7's
+selection API through the `Launcher` registry with continue-on-failure —
+`S`). See [phase-6-launchers.md](docs/plan/phase-6-launchers.md) for each's
+test list.
 
 Phases 8 and 9 remain open and unscheduled behind Phase 6 (additive,
 resequenceable per `IMPLEMENTATION_PLAN.md`'s phase table) — Phase 8 is the

@@ -25,6 +25,7 @@ impl Launcher for FakeLauncher {
     fn launch(&self, _req: &LaunchRequest) -> Result<LaunchHandle, LauncherError> {
         Ok(LaunchHandle {
             launcher_id: self.id.to_string(),
+            scratch_dir: None,
         })
     }
 }
@@ -89,6 +90,7 @@ fn request_needing_directory_volume_skips_launcher_lacking_it_even_when_preferre
             directory_volume: true,
             ..Default::default()
         },
+        ..Default::default()
     };
     let chosen = reg.select(&req, None).unwrap();
     assert_eq!(chosen.id(), "fallback-with-dirvol");
@@ -110,6 +112,7 @@ fn no_launcher_satisfying_request_names_the_missing_capability() {
             hardfile: true,
             ..Default::default()
         },
+        ..Default::default()
     };
     let msg = match reg.select(&req, None) {
         Ok(_) => panic!("expected no launcher to satisfy the request"),

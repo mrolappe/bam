@@ -7,7 +7,12 @@
 //! directory-volume support becomes a routing decision the core makes, not
 //! a fact buried in launcher-specific code.
 
+use std::path::PathBuf;
+
 use thiserror::Error;
+
+use crate::blob::BlobHash;
+use crate::unpack::ArchiveFormat;
 
 pub use crate::unpack::Availability;
 
@@ -59,14 +64,36 @@ impl LauncherCaps {
     }
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
+/// What to launch: an archive identified the same way P5's cache and
+/// unpacker registry identify it, by content hash plus detected format.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct LaunchArchive {
+    pub blob: BlobHash,
+    pub format: ArchiveFormat,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Default)]
 pub struct LaunchRequest {
     pub required: LauncherCaps,
+    pub archive: Option<LaunchArchive>,
 }
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct LaunchHandle {
     pub launcher_id: String,
+    /// A private scratch directory the launcher extracted into, if any —
+    /// removed when the handle drops so a launched archive never lingers
+    /// on disk after the emulator session it was extracted for is gone.
+    pub scratch_dir: Option<PathBuf>,
+}
+
+#[cfg(feature = "native")]
+impl Drop for LaunchHandle {
+    fn drop(&mut self) {
+        if let Some(dir) = self.scratch_dir.take() {
+            let _ = std::fs::remove_dir_all(dir);
+        }
+    }
 }
 
 #[derive(Debug, Error)]
@@ -79,6 +106,10 @@ pub enum LauncherError {
     CapabilityUnmet(&'static str),
     #[error("no launcher available")]
     NoneAvailable,
+    #[error("launch request named no archive to launch")]
+    MissingArchive,
+    #[error("launch failed: {0}")]
+    Launch(String),
 }
 
 pub trait Launcher {
@@ -154,3 +185,8 @@ impl Default for LauncherRegistry {
         Self::new()
     }
 }
+
+#[cfg(feature = "native")]
+mod fs_uae;
+#[cfg(feature = "native")]
+pub use fs_uae::{FsUaeLauncher, fs_uae_config};

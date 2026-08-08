@@ -141,7 +141,7 @@ impl Default for UnpackerRegistry {
 
 mod lha_header;
 pub use lha_header::{
-    HeaderLevel, LhaFileHeader, LhaHeaderError, ProtectionBits, parse_lha_header,
+    HeaderLevel, LhaFileHeader, LhaHeaderError, ProtectionBits, list_headers, parse_lha_header,
 };
 
 mod uaem;
