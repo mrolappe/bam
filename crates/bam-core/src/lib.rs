@@ -5,6 +5,7 @@ pub mod cancel;
 pub mod highlight;
 pub mod http;
 pub mod ingest;
+pub mod launch;
 pub mod llm;
 pub mod progress;
 pub mod query;

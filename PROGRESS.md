@@ -112,39 +112,49 @@ against a llama.cpp server, per §10's hard requirement.
 
 ---
 
+## Round 40 — 2026-08-08 · Phase 6: `Launcher` trait, registry, probing (P6.1)
+
+`crates/bam-core/src/launch/mod.rs` adds the third I4 registry, mirroring
+`query::lang::LanguageRegistry` and `unpack::UnpackerRegistry`: `Launcher`
+(`id`/`probe`/`capabilities`/`launch`), `LauncherCaps` (`directory_volume`,
+`uaem_sidecars`, `hardfile`, `adf`), and `LauncherRegistry::select` — config
+override first, else the first registered (preference-ordered) launcher
+that is both available and capability-sufficient. `Availability` is reused
+from `unpack` rather than redefined. Selection failure names the specific
+unmet capability (`LauncherError::CapabilityUnmet`) rather than a generic
+"no launcher found"; an unavailable override errors as `Unavailable(id)`
+instead of silently falling back. 6 tests in `tests/launch.rs` cover the
+phase doc's five plus config-override-wins. 214 tests total (6 added).
+`cargo fmt`, `clippy`, and the wasm32 build all clean.
+
 ## Next task
 
-**P6.1 — `Launcher` trait, registry, probing** ([phase-6-launchers.md](docs/plan/phase-6-launchers.md)):
-the third registry (alongside `QueryLanguage` and `Unpacker`, I4). `probe`/
-`capabilities`/`launch`, where `capabilities()` (`directory_volume`,
-`uaem_sidecars`, `hardfile`, `adf`) **drives selection, not just reporting**
-— a request needing `directory_volume` must skip a launcher lacking it even
-when otherwise preferred, and an unmet capability must be named in the
-error rather than a generic "no launcher found". Marked **O**: the
-capabilities-drive-behaviour contract is what keeps Phase 5's extraction
-path emulator-agnostic as more launchers are added later (P6.2 FS-UAE first,
-Amiberry/vAmiga unscheduled follow-ons).
+**P6.2 — FS-UAE launcher** ([phase-6-launchers.md](docs/plan/phase-6-launchers.md)):
+extract an archive to scratch (P5.4/P5.5), write `.uaem` sidecars (P5.7),
+generate an FS-UAE config pointing a directory volume at it, spawn the
+process. FS-UAE runs on both macOS and Linux, which is why it's first.
 
 **Tests first** (phase-6-launchers.md's own list):
-- Two stub launchers register; the registry picks by configured preference.
-- A launcher whose `probe` reports unavailable is never selected.
-- A request needing `directory_volume` skips a launcher lacking it, even
-  when that launcher is otherwise preferred.
-- With no launcher able to satisfy a request, the error names the
-  capability that could not be met.
-- Config override wins, and overriding to an unavailable launcher errors
-  clearly rather than falling back silently.
+- Generated config for a known request matches an expected fixture, field
+  for field.
+- `probe` finds FS-UAE at the platform default path and reports
+  unavailable when absent.
+- `capabilities()` reports `directory_volume: true`, `uaem_sidecars: true`.
+- Scratch directories are cleaned up when the handle is dropped.
+- One `#[ignore]`d manual test: launching an archive containing a
+  startup-sequence script shows the script **running** — the real
+  end-to-end check of whether P5.6 and P5.7 actually worked. Do not skip
+  running it manually once; record the result here.
 
-**Done when:** all five pass. Phase 6 continues with P6.2 (FS-UAE launcher,
-S), P6.3 (`bam.toml` launcher config, H), P6.4 (launch a selection, S) —
+**Done when:** the four automated tests pass; the ignored one is run
+manually once and its result recorded in `PROGRESS.md`. Phase 6 continues
+with P6.3 (`bam.toml` launcher config, H), P6.4 (launch a selection, S) —
 see the phase doc for each.
 
 Phases 8 and 9 remain open and unscheduled behind Phase 6 (additive,
 resequenceable per `IMPLEMENTATION_PLAN.md`'s phase table) — Phase 8 is the
 extism WASM plugin host (5 tasks), Phase 9 is the Vue/`bam-server`/Tauri
-frontends (7 tasks). Phase 6 was chosen first only because it was the next
-one picked in this round; nothing blocks reordering if a future session
-prefers 8 or 9 instead.
+frontends (7 tasks).
 
 ---
 
