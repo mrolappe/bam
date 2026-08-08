@@ -22,9 +22,11 @@ pub enum LlmError {
 pub struct CompletionRequest {
     pub prompt: String,
     /// GBNF grammar text, used only when [`Capabilities::grammar`] is
-    /// [`GrammarSupport::Gbnf`]; ignored otherwise until P7.2 adds JSON
-    /// Schema constraining.
+    /// [`GrammarSupport::Gbnf`].
     pub grammar: Option<String>,
+    /// JSON Schema text (P7.2's `QueryLanguage::grammar(JsonSchema)`), used
+    /// only when [`Capabilities::grammar`] is [`GrammarSupport::JsonSchema`].
+    pub json_schema: Option<String>,
     pub max_tokens: Option<u32>,
 }
 

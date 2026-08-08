@@ -65,10 +65,17 @@ impl<'a, C: HttpClient> LlmProvider for OpenAiCompatibleProvider<'a, C> {
         if let Some(max_tokens) = req.max_tokens {
             body["max_tokens"] = json!(max_tokens);
         }
-        // JSON Schema constraining lands in P7.2; llama.cpp's GBNF is a
-        // plain top-level field, so it can be wired through today.
         if let (Some(grammar), GrammarSupport::Gbnf) = (&req.grammar, self.config.grammar) {
             body["grammar"] = json!(grammar);
+        }
+        if let (Some(schema), GrammarSupport::JsonSchema) = (&req.json_schema, self.config.grammar)
+        {
+            let schema: Value = serde_json::from_str(schema)
+                .map_err(|e| LlmError::InvalidResponse(format!("invalid json_schema: {e}")))?;
+            body["response_format"] = json!({
+                "type": "json_schema",
+                "json_schema": {"name": "bam_query", "schema": schema, "strict": true},
+            });
         }
 
         let resp = self.post("/v1/chat/completions", body).await?;

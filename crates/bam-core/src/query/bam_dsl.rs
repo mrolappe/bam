@@ -37,10 +37,11 @@ impl QueryLanguage for BamDsl {
         Some(render(p))
     }
 
-    // GBNF/JSON Schema generation is P7.2's job, not this one's; `None` is a
-    // capability gap, not a failure (see the trait's own doc comment).
-    fn grammar(&self, _kind: GrammarKind) -> Option<String> {
-        None
+    fn grammar(&self, kind: GrammarKind) -> Option<String> {
+        Some(match kind {
+            GrammarKind::Gbnf => super::grammar::bam_dsl_gbnf(),
+            GrammarKind::JsonSchema => super::grammar::bam_dsl_json_schema().to_string(),
+        })
     }
 }
 

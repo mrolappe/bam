@@ -113,42 +113,106 @@ wasm32-unknown-unknown` still compiles (I1 holds — the trait and provider
 are plain code, no `native` gate needed since they go through `HttpClient`
 generically rather than `reqwest` directly).
 
+## Round 36 — 2026-08-08 · Phase 7: grammar generation per language (P7.2)
+
+`crates/bam-core/src/query/grammar.rs` (new): `BamDsl::grammar(GrammarKind)`
+(`bam_dsl.rs`, was a stubbed `None`) now generates both artifacts from one
+production-rule description (`rules()`) transliterated from
+`docs/lang-bam-dsl.md`'s CFG — one deliberate deviation: `value`'s doc-level
+`number size_suffix? | date | string | bareword_value` breakdown collapses
+to `rhs := string | bareword`, matching what `Parser::lex_rhs` actually
+accepts (type-specific parsing happens later, in `typed_value`, not at the
+lexical level) — a grammar meant to constrain generation has to match the
+real parser, not the doc's more suggestive gloss. `field` stays a generic
+`ident`, exactly as the doc defines it: field *validity* is a
+`FieldRegistry` concern the real parser only checks after parsing, and
+`grammar()` has no registry parameter to consult anyway (I2's trait
+signature, unchanged).
+
+GBNF (llama.cpp) renders `rules()` into GBNF text — constrains raw
+`bam-dsl` text token by token. JSON Schema (cloud) instead comes from
+`Predicate`'s own `#[derive(JsonSchema)]` (already present on every IR type
+since P2.1) via `schemars::schema_for!` — constrains a JSON encoding of the
+same predicate tree, since that's what cloud "structured output" actually
+constrains, not raw DSL text. Both are one source in the sense that matters
+(the DSL's own grammar; the IR type itself), not two hand-copied encodings
+of a third, invented representation.
+
+Two interpreters exist for tests only (`gbnf_accepts`, `json_schema_accepts`
+in `grammar.rs`): a backtracking matcher over the exact same `rules()` AST
+the GBNF renderer walks (so a renderer bug shows up as a
+matcher/renderer disagreement, not a silently-wrong string), and a ~60-line
+Draft-07-subset JSON Schema validator (`$ref`, `oneOf`/`anyOf`/`allOf`,
+`enum`, `type`, `properties`/`required`, `items` — exactly what `schemars`
+0.8 emits for these types) rather than trusting `schema_for!` by
+construction or adding a validator crate. `crates/bam-core/tests/
+query_grammar.rs`: all fifteen `docs/lang-bam-dsl.md` examples validate
+against both (P2.4's parser confirms each parses; this file only needs the
+source text); a deliberately malformed input (unbalanced `(`; an unknown
+`Predicate` variant tag) is rejected by both; the equivalence property
+test — the reason this task was marked **O** — renders a hand-enumerated
+spread of `Predicate`s (every variant, every `CmpOp`/`Value`/`Pattern`/
+`SelectionRef`, several nestings) to `bam-dsl` text and to JSON and checks
+both artifacts accept, then reparses the text and asserts it round-trips to
+the same `Predicate` (no fuzzing crate in the workspace; the grammar is
+small enough that a fixed spread exercises every construct without one); a
+`QueryLanguage` with no grammar at all confirms `None` propagates cleanly.
+
+Also closed P7.1's own loose end: `CompletionRequest` gained a
+`json_schema: Option<String>` field (`llm/mod.rs`) alongside `grammar`, and
+`OpenAiCompatibleProvider::complete` now wires it into
+`response_format: {"type": "json_schema", ...}` when
+`capabilities().grammar == GrammarSupport::JsonSchema` — the comment left
+at that call site in Round 35 pointed straight at this round. One test
+added in `llm.rs` confirming it's wired for the cloud config and absent for
+llama.cpp's.
+
+194 tests total (5 added: 4 in `query_grammar.rs`, 1 in `llm.rs`; three
+pre-existing `CompletionRequest` call sites in `llm.rs` just picked up the
+new `json_schema: None` field, not new tests). `cargo clippy --workspace
+--all-targets` clean; `cargo build -p
+bam-core --no-default-features --target wasm32-unknown-unknown` still
+compiles (I1 holds — `grammar.rs` is plain code, no `native` gate, and
+`schemars` was already an ungated dependency).
+
 ## Next task
 
-**P7.2 — grammar generation per language** ([phase-7-llm.md](docs/plan/phase-7-llm.md)):
-generate GBNF (llama.cpp) and JSON Schema (cloud) from
-`QueryLanguage::grammar()` (I2), not from a hardcoded DSL. Marked **O**
-(Opus) — the hard part is an equivalence property test proving both
-artifacts accept the same language, not just matching the fifteen examples
-in `docs/lang-bam-dsl.md`.
+**P7.3 — query generation prompt** ([phase-7-llm.md](docs/plan/phase-7-llm.md)):
+a prompt template carrying the TREE category vocabulary, a file-type
+dictionary, and few-shot examples (§11), with output grammar-constrained via
+P7.2's `BamDsl::grammar(GrammarKind::Gbnf)` threaded through
+`CompletionRequest.grammar` (llama.cpp) or `.json_schema` (cloud, this
+round's addition). Marked **S**.
 
-What Phase 7 can already build on, so a fresh session doesn't have to
-re-derive it:
-- **P7.1's `LlmProvider`/`OpenAiCompatibleProvider`** (this round) is what
-  P7.3's query-generation prompt and P7.5's summariser call through.
-  `CompletionRequest.grammar` already threads a GBNF string to the request
-  body when `capabilities().grammar == GrammarSupport::Gbnf`; P7.2 is what
-  produces that string (and the JSON Schema counterpart) instead of a
-  caller hand-writing one.
-- **P2.1's `Similar` IR node** was reserved but rejected by the compiler
-  since Round 8/9 (P2.5) specifically for P7.4 to unreserve.
-- **P2.2's `QueryLanguage` trait** (`grammar()`) is what P7.2 derives GBNF
-  and JSON Schema from — both representations from one source, never
-  hand-maintained separately (§10).
-- **P2.7's selection API** (I7) is what P7.5 targets a summarisation run at
-  a selection rather than the whole table.
-- **The `enrichment` table plus `upsert_enrichment`** (added Round 34/P5.8)
-  is exactly the mechanism P7.5's `kind = 'llm_summary'` producer needs —
-  readme (P4.5's `readme_header`) and inventory (P5.8's `inventory`) are
-  its two inputs.
-- Not yet in the workspace: `sqlite-vec`, needed for P7.4's embedding
-  storage — add it then, not speculatively now.
+**The generated query is always shown to the user and always editable
+before it runs — §11's hard requirement, worth checking by call-graph
+review, not just by test.** A model returning unparseable output (or, for
+the JSON-Schema path, JSON that doesn't deserialize to a `Predicate`) must
+produce a clear error, not a panic — P7.2's `Predicate`'s ordinary
+`serde_json::from_str` failure is exactly that error path already.
 
-§16's cost-visibility requirement (P7.5: estimated token count/cost shown
-and confirmed before a bulk run against a paid provider) and §11's
-always-editable-generated-query rule (P7.3) are both hard requirements
-named directly in the phase doc, not just nice-to-haves — worth keeping in
-view across all of Phase 7, not just their own tasks.
+What P7.2 leaves ready to build on:
+- `BamDsl::grammar(Gbnf)` and `BamDsl::grammar(JsonSchema)` both return
+  `Some` today (`crates/bam-core/src/query/bam_dsl.rs`) — P7.3 doesn't need
+  to touch grammar generation itself, only assemble the prompt and route
+  the model's output back through `BamDsl::parse` (text) or
+  `serde_json::from_str::<Predicate>` (JSON) into a `Predicate` for the
+  user to see and edit as rendered `bam-dsl` text (`BamDsl::render`).
+- `CompletionRequest.json_schema` (this round) is where the JSON Schema
+  string goes; `OpenAiCompatibleProvider` already threads it into
+  `response_format` for `GrammarSupport::JsonSchema` providers.
+- **P2.1's `Similar` IR node** is still reserved, still rejected by the
+  compiler, still waiting on P7.4 — P7.3's few-shot examples can use
+  `similar:` syntax (it parses and renders today) without it running.
+
+Still true from Round 35, unclaimed by this round:
+- **P2.7's selection API** (I7) is what P7.5 targets a summarisation run at.
+- **The `enrichment` table plus `upsert_enrichment`** (P5.8) is P7.5's
+  `kind = 'llm_summary'` producer's mechanism.
+- Not yet in the workspace: `sqlite-vec`, needed for P7.4 — add it then.
+
+§16's cost-visibility requirement (P7.5) remains a hard requirement worth
+keeping in view, not yet due.
 
 ---
 

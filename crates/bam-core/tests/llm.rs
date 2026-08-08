@@ -81,6 +81,7 @@ async fn same_code_path_completes_against_llama_cpp_and_cloud_fakes() {
             .complete(CompletionRequest {
                 prompt: "say hello".into(),
                 grammar: None,
+                json_schema: None,
                 max_tokens: None,
             })
             .await
@@ -102,6 +103,36 @@ async fn capabilities_report_gbnf_for_llama_cpp_and_json_schema_for_cloud() {
 }
 
 #[tokio::test]
+async fn json_schema_is_wired_into_response_format_for_cloud_only() {
+    let schema = r#"{"type":"object"}"#;
+
+    for (config, should_wire) in [(llama_cpp_config(), false), (cloud_config(), true)] {
+        let client = FakeClient::new(vec![ok_json(
+            r#"{"choices":[{"message":{"content":"ok"}}]}"#,
+        )]);
+        let provider = OpenAiCompatibleProvider::new(&client, config);
+
+        provider
+            .complete(CompletionRequest {
+                prompt: "generate a query".into(),
+                grammar: None,
+                json_schema: Some(schema.to_string()),
+                max_tokens: None,
+            })
+            .await
+            .unwrap();
+
+        let sent = client.requests.lock().unwrap().pop().unwrap();
+        let body: serde_json::Value = serde_json::from_slice(&sent.body).unwrap();
+        assert_eq!(
+            body.get("response_format").is_some(),
+            should_wire,
+            "response_format presence for {should_wire}"
+        );
+    }
+}
+
+#[tokio::test]
 async fn connection_failure_names_the_configured_url() {
     let client = FakeClient::new(vec![Err(HttpError::Request("connection refused".into()))]);
     let provider = OpenAiCompatibleProvider::new(&client, llama_cpp_config());
@@ -110,6 +141,7 @@ async fn connection_failure_names_the_configured_url() {
         .complete(CompletionRequest {
             prompt: "say hello".into(),
             grammar: None,
+            json_schema: None,
             max_tokens: None,
         })
         .await
@@ -156,6 +188,7 @@ async fn real_llama_cpp_completion() {
         .complete(CompletionRequest {
             prompt: "reply with exactly the word: pong".into(),
             grammar: None,
+            json_schema: None,
             max_tokens: Some(16),
         })
         .await
