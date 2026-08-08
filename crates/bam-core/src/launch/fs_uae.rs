@@ -86,6 +86,7 @@ pub struct FsUaeLauncher<S: BlobStore> {
     store: S,
     unpackers: UnpackerRegistry,
     candidates: Vec<PathBuf>,
+    extra_args: Vec<String>,
 }
 
 impl<S: BlobStore> FsUaeLauncher<S> {
@@ -101,10 +102,23 @@ impl<S: BlobStore> FsUaeLauncher<S> {
         unpackers: UnpackerRegistry,
         candidates: Vec<PathBuf>,
     ) -> Self {
+        Self::with_candidates_and_args(store, unpackers, candidates, Vec::new())
+    }
+
+    /// As [`Self::with_candidates`], plus extra arguments (`bam.toml`'s
+    /// `[launch.launchers.fs-uae] args`, P6.3) appended to the spawned
+    /// command line after the generated config path.
+    pub fn with_candidates_and_args(
+        store: S,
+        unpackers: UnpackerRegistry,
+        candidates: Vec<PathBuf>,
+        extra_args: Vec<String>,
+    ) -> Self {
         Self {
             store,
             unpackers,
             candidates,
+            extra_args,
         }
     }
 
@@ -168,6 +182,7 @@ impl<S: BlobStore> Launcher for FsUaeLauncher<S> {
 
         Command::new(&binary)
             .arg(&config_path)
+            .args(&self.extra_args)
             .spawn()
             .map_err(|e| LauncherError::Launch(e.to_string()))?;
 

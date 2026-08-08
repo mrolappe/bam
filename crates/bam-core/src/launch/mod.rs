@@ -7,14 +7,45 @@
 //! directory-volume support becomes a routing decision the core makes, not
 //! a fact buried in launcher-specific code.
 
+use std::collections::HashMap;
 use std::path::PathBuf;
 
+use serde::Deserialize;
 use thiserror::Error;
 
 use crate::blob::BlobHash;
 use crate::unpack::ArchiveFormat;
 
 pub use crate::unpack::Availability;
+
+/// The `[launch]` section of `bam.toml` (P6.3): a preference order across
+/// registered launcher ids, plus a per-launcher binary path override and
+/// extra spawn arguments. Deserialized by the caller (same pattern as
+/// `bam_tui::input::KeymapConfig`) — `bam-core` doesn't depend on `toml`
+/// itself, only on `serde`.
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct LaunchConfig {
+    #[serde(default)]
+    pub preference: Vec<String>,
+    #[serde(default)]
+    pub launchers: HashMap<String, LauncherOverride>,
+}
+
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct LauncherOverride {
+    pub path: Option<PathBuf>,
+    #[serde(default)]
+    pub args: Vec<String>,
+}
+
+/// An explicit configured path replaces the platform-default candidate list
+/// outright; with none configured, the defaults are probed in order.
+pub fn resolve_candidates(defaults: Vec<PathBuf>, configured: Option<PathBuf>) -> Vec<PathBuf> {
+    match configured {
+        Some(p) => vec![p],
+        None => defaults,
+    }
+}
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Default)]
 pub struct LauncherCaps {
@@ -134,6 +165,26 @@ impl LauncherRegistry {
 
     pub fn register(&mut self, launcher: Box<dyn Launcher>) {
         self.launchers.push(launcher);
+    }
+
+    /// Reorders registered launchers by `preference` (unlisted launchers
+    /// keep their relative registration order, after the preferred ones) —
+    /// `select`'s "registration order is preference order" then falls out
+    /// for free. Errors, naming it, on any id in `preference` that isn't
+    /// registered.
+    pub fn apply_preference(&mut self, preference: &[String]) -> Result<(), LauncherError> {
+        for id in preference {
+            if !self.launchers.iter().any(|l| l.id() == id) {
+                return Err(LauncherError::UnknownLauncher(id.clone()));
+            }
+        }
+        self.launchers.sort_by_key(|l| {
+            preference
+                .iter()
+                .position(|p| p == l.id())
+                .unwrap_or(usize::MAX)
+        });
+        Ok(())
     }
 
     /// Config override first (must be registered and probe available, and

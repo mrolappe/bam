@@ -193,13 +193,32 @@ still unknown. Left as a known, flagged gap rather than guessed at further;
 point for whoever picks this up (try an archive with `Protect FILE -e` run
 first and diff the header bytes against this one).
 
+## Round 42 — 2026-08-08 · Phase 6: launcher configuration (P6.3)
+
+`crates/bam-core/src/launch/mod.rs` adds `LaunchConfig`/`LauncherOverride`
+(`Deserialize`, mirroring `bam_tui::input::KeymapConfig`'s pattern — `bam-core`
+gains no `toml` dependency, only `serde`; the caller in `bam-tui` does the
+actual `toml::from_str`), `resolve_candidates` (an explicit configured path
+replaces the platform-default list outright, else defaults are probed in
+order), and `LauncherRegistry::apply_preference` (reorders registered
+launchers by a preference list, unlisted ones keeping their relative
+registration order after the preferred ones; errors naming the id on any
+unregistered entry). `FsUaeLauncher` gained `with_candidates_and_args` and an
+`extra_args` field threaded into the spawned `Command`. `with_candidates`
+still exists unchanged (delegates to the new constructor with empty args),
+so all six P6.1/P6.2 tests still pass untouched.
+
+5 new tests in `tests/launch_config.rs` (the phase doc's four, plus one
+covering `apply_preference` reordering `select`'s outcome directly) — 225
+passing total, up from 220. `cargo fmt`, `cargo clippy --workspace
+--all-targets --features native -- -D warnings`, and the wasm32
+`--no-default-features` build are all clean.
+
 ## Next task
 
-Phase 6 continues with **P6.3** (`bam.toml` launcher config: binary path,
-extra args, scratch directory, preference order, per-platform default
-candidate paths — `H`) and **P6.4** (launch a selection, iterating I7's
+Phase 6 continues with **P6.4** (launch a selection, iterating I7's
 selection API through the `Launcher` registry with continue-on-failure —
-`S`). See [phase-6-launchers.md](docs/plan/phase-6-launchers.md) for each's
+`S`). See [phase-6-launchers.md](docs/plan/phase-6-launchers.md) for its
 test list.
 
 Phases 8 and 9 remain open and unscheduled behind Phase 6 (additive,
