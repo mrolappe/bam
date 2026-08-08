@@ -11,6 +11,7 @@ pub const USER_AGENT: &str = concat!(
     " (+https://github.com/mrolappe/bam)"
 );
 
+#[derive(Clone)]
 pub struct ReqwestClient {
     inner: Client,
 }

@@ -165,6 +165,43 @@ real backend to talk to (currently only exercised against mocks).
 
 ---
 
+## Round 45 — 2026-08-08 · Phase 9: `bam-server` HTTP/SSE adapter (P9.2)
+
+A new `bam-server` crate, routed exactly to the paths and JSON shapes
+`frontend/src/transport/HttpClient.ts` already assumed from Round 44 — no
+frontend changes needed. Sessions are cookie-based (`bam_session`, set on
+first response); every `bam_core::api` call goes through a `SessionHandle`
+that hands a closure to the session's own dedicated OS thread rather than
+sharing `Session` across axum's multi-threaded executor — `Session` wraps a
+`rusqlite::Connection`, which is deliberately not `Sync` (I1's purity check
+never asked it to be; its only prior caller, `bam-tui`, is single-threaded),
+so this keeps `bam-core` untouched rather than forcing thread-safety onto it.
+An ingest's `active` broadcast-sender slot lives in its own
+`std::sync::Mutex`, outside the actor's job queue: an ingest occupies the
+actor thread for its whole duration, so a progress subscription that had to
+queue behind it would only ever learn about progress after the ingest had
+already finished — reading that mutex directly instead lets a reconnecting
+SSE client subscribe immediately while the ingest is still running, or fall
+back to a synthesized terminal event from `operation_status` once it's not.
+
+All five acceptance items hold: every `bam_core::api` operation reachable
+over HTTP and round-tripping its types (one test walking parse → search →
+mark → select → save/load/delete → clear across the real routes); two
+sessions (two cookie jars) confirmed not to observe each other's marks;
+SSE delivering a real `Started`/`Advanced`/`Finished` sequence for an
+offline ingest; a client that disconnects and reconnects with the same
+`OperationId` resolving to `Finished` either way, with the ingest itself
+proven to have actually completed rather than being orphaned by the first
+disconnect; and a grep-based purity test in the spirit of P0.4 confirming
+no `rusqlite` name and no raw SQL keyword anywhere in `bam-server/src`. 235
+Rust tests project-wide (5 added), CI's existing `--workspace` fmt/clippy/
+test steps cover the new crate with no workflow changes.
+
+**Next:** P9.3, the Tauri shell — a thin host providing `TauriClient` for
+the same `frontend/` build `bam-server` now serves over HTTP.
+
+---
+
 ## Decisions carried forward
 
 The eight architectural invariants are stated in full in
