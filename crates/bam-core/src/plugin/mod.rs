@@ -131,7 +131,25 @@ pub fn contract_schema(extension_point: &str) -> Option<Value> {
     }
 }
 
+/// The `[plugins]` section of `bam.toml` (P8.5): which plugins are disabled
+/// outright, plus the resource limits `extism` enforces per plugin call —
+/// `bam-core` doesn't depend on `toml` itself, only on `serde`, same pattern
+/// as `launch::LaunchConfig`.
+#[derive(Debug, Clone, Default, Deserialize)]
+pub struct PluginConfig {
+    #[serde(default)]
+    pub disabled: Vec<String>,
+    #[serde(default)]
+    pub timeout_ms: Option<u64>,
+    #[serde(default)]
+    pub max_memory_pages: Option<u32>,
+}
+
 #[cfg(feature = "native")]
 mod wasm;
 #[cfg(feature = "native")]
-pub use wasm::{AnalyzeError, PluginLoadError, WasmContentAnalyzer, WasmUnpacker};
+pub use wasm::{
+    AnalyzeError, PluginLoadError, PluginLoadReport, WasmContentAnalyzer, WasmUnpacker,
+};
+#[cfg(feature = "native")]
+pub use wasm::{discover_content_analyzers, discover_unpackers};

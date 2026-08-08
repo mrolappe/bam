@@ -291,6 +291,54 @@ that fails to load reported at startup without blocking it.
 
 ---
 
+## Round 55 — 2026-08-08 · Phase 8: plugin loading configuration and failure isolation (P8.5, Phase 8 exit)
+
+`PluginConfig` (`bam_core::plugin`, host-independent — same pattern as
+`launch::LaunchConfig`): the `[plugins]` section of `bam.toml`, with
+`disabled: Vec<String>` plus `timeout_ms`/`max_memory_pages` limits.
+`WasmUnpacker`/`WasmContentAnalyzer` gained `load_with_config` alongside the
+existing `load` (which now delegates to it with defaults, so none of the
+~15 existing call sites needed to change): a disabled plugin's name is
+checked against the parsed manifest before its `.wasm` is even read, and
+`build_plugin` threads the limits into an `extism::Manifest` — `timeout_ms`
+and `with_memory_max` — rather than the raw-bytes `Plugin::new` P8.2/P8.3
+used, since `extism::Manifest` implements `Into<WasmInput>` as a drop-in.
+Both limit kinds surface as an ordinary `Err` from `plugin.call` through
+extism's own epoch-interrupt timer and `wasmtime` memory limiter — the same
+path a guest panic (a WASM trap) already took, so no catch-unwind wrapper
+was needed at any call site to satisfy "a broken plugin degrades one
+feature, never the application."
+
+`discover_unpackers`/`discover_content_analyzers` scan a directory of
+plugin subdirectories, loading each independently and collecting failures
+into a `PluginLoadReport` (naming the directory) instead of stopping — one
+broken or disabled plugin never blocks the rest from loading. Required
+`FsBlobStore: Clone` (added; it's one `PathBuf`) since discovery hands each
+`WasmUnpacker` its own owned store instance.
+
+Test fixture: `tests/fixtures/plugins/misbehaving-unpacker/` — one
+`extism-pdk` WASM plugin whose `unpack` panics, infinite-loops, or hogs
+memory depending on the archive bytes it's given (`b"panic"`/`b"loop"`/
+`b"memory"`, decoded from `bytes_b64` the same way a real archive would be),
+covering all three failure-isolation cases without three fixture binaries.
+5 tests added (267 total): a panic caught without harming the plugin
+instance for later calls, a `timeout_ms`-bounded call terminated well under
+the suite's own patience, a `max_memory_pages`-bounded call terminated
+against the memory hog, discovery reporting one malformed-manifest
+directory by path while still loading a good plugin alongside it, and
+`disabled` rejecting a plugin by name before any `.wasm` read.
+
+**Phase 8 exit reached.** All five P8 tasks are done: manifest/contract
+versioning (P8.1), the extism host wired into the unchanged `UnpackerRegistry`
+(P8.2, I4 confirmed), the `content_analyzer` extension point (P8.3), a
+WASM-backed unpacker doing real archive extraction (P8.4), and failure
+isolation plus config (P8.5). Third parties can extend content analysis and
+unpacking in any language that compiles to WASM, without a native ABI to
+break — and a broken plugin never takes the host down with it. Every phase
+in `IMPLEMENTATION_PLAN.md` is now closed.
+
+---
+
 ## Decisions carried forward
 
 The eight architectural invariants are stated in full in

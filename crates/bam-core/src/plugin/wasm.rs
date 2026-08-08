@@ -18,7 +18,7 @@ use crate::blob::{BlobHash, BlobStore};
 use crate::unpack::{ArchiveFormat, Availability, ExtractedFile, UnpackError, Unpacker};
 
 use super::{
-    ContentAnalyzerInput, ContentAnalyzerOutput, ManifestError, PluginManifest,
+    ContentAnalyzerInput, ContentAnalyzerOutput, ManifestError, PluginConfig, PluginManifest,
     UnpackProbeResponse, UnpackRequest, UnpackResponse,
 };
 
@@ -32,6 +32,34 @@ pub enum PluginLoadError {
     Io(#[from] std::io::Error),
     #[error("failed to load wasm module: {0}")]
     Wasm(String),
+    #[error("plugin '{0}' is disabled in config")]
+    Disabled(String),
+}
+
+/// Builds an `extism::Plugin` with P8.5's resource limits applied: a call
+/// exceeding `timeout_ms` is interrupted, one exceeding `max_memory_pages`
+/// is trapped — both surface as an ordinary `Err` from `plugin.call`, the
+/// same path a guest panic/trap already takes, so no extra catch-unwind
+/// wrapper is needed at the call sites.
+fn build_plugin(
+    wasm_bytes: &[u8],
+    config: &PluginConfig,
+) -> Result<extism::Plugin, PluginLoadError> {
+    let mut manifest = extism::Manifest::new([extism::Wasm::data(wasm_bytes.to_vec())]);
+    manifest.timeout_ms = config.timeout_ms;
+    if let Some(pages) = config.max_memory_pages {
+        manifest = manifest.with_memory_max(pages);
+    }
+    extism::Plugin::new(manifest, [], true).map_err(|e| PluginLoadError::Wasm(e.to_string()))
+}
+
+/// One plugin directory under a discovery root that failed to load —
+/// reported at startup, naming the directory, without stopping discovery of
+/// the rest (P8.5).
+#[derive(Debug, Clone)]
+pub struct PluginLoadReport {
+    pub dir: std::path::PathBuf,
+    pub error: String,
 }
 
 #[derive(Debug, Error)]
@@ -62,6 +90,17 @@ fn claim_glob(format: ArchiveFormat) -> &'static str {
 
 impl<S: BlobStore> WasmUnpacker<S> {
     pub fn load(dir: &Path, store: S) -> Result<Self, PluginLoadError> {
+        Self::load_with_config(dir, store, &PluginConfig::default())
+    }
+
+    /// Same as [`Self::load`], but honouring P8.5's `[plugins]` config: a
+    /// disabled plugin is rejected before its `.wasm` is even read, and
+    /// `config`'s resource limits are applied to every subsequent call.
+    pub fn load_with_config(
+        dir: &Path,
+        store: S,
+        config: &PluginConfig,
+    ) -> Result<Self, PluginLoadError> {
         let manifest_src = fs::read_to_string(dir.join("manifest.toml"))?;
         let manifest = PluginManifest::parse(&manifest_src)?;
         if manifest.extension_point != "unpacker" {
@@ -70,15 +109,48 @@ impl<S: BlobStore> WasmUnpacker<S> {
                 expected: "unpacker".to_string(),
             });
         }
+        if config.disabled.contains(&manifest.name) {
+            return Err(PluginLoadError::Disabled(manifest.name));
+        }
         let wasm_bytes = fs::read(dir.join("plugin.wasm"))?;
-        let plugin = extism::Plugin::new(&wasm_bytes, [], true)
-            .map_err(|e| PluginLoadError::Wasm(e.to_string()))?;
+        let plugin = build_plugin(&wasm_bytes, config)?;
         Ok(Self {
             manifest,
             plugin: Mutex::new(plugin),
             store,
         })
     }
+}
+
+/// Loads every plugin subdirectory of `root` as a `WasmUnpacker` (P8.5): a
+/// directory that fails to load — malformed manifest, missing `.wasm`,
+/// disabled in `config` — is collected into a report instead of stopping
+/// discovery, so one broken plugin never blocks startup or the rest of the
+/// registry from loading.
+pub fn discover_unpackers<S: BlobStore + Clone>(
+    root: &Path,
+    store: &S,
+    config: &PluginConfig,
+) -> (Vec<WasmUnpacker<S>>, Vec<PluginLoadReport>) {
+    let mut loaded = Vec::new();
+    let mut failures = Vec::new();
+    let Ok(entries) = fs::read_dir(root) else {
+        return (loaded, failures);
+    };
+    for entry in entries.flatten() {
+        let dir = entry.path();
+        if !dir.is_dir() {
+            continue;
+        }
+        match WasmUnpacker::load_with_config(&dir, store.clone(), config) {
+            Ok(plugin) => loaded.push(plugin),
+            Err(e) => failures.push(PluginLoadReport {
+                dir,
+                error: e.to_string(),
+            }),
+        }
+    }
+    (loaded, failures)
 }
 
 impl<S: BlobStore> Unpacker for WasmUnpacker<S> {
@@ -174,6 +246,12 @@ pub struct WasmContentAnalyzer {
 
 impl WasmContentAnalyzer {
     pub fn load(dir: &Path) -> Result<Self, PluginLoadError> {
+        Self::load_with_config(dir, &PluginConfig::default())
+    }
+
+    /// Same as [`Self::load`], but honouring P8.5's `[plugins]` config —
+    /// see [`WasmUnpacker::load_with_config`].
+    pub fn load_with_config(dir: &Path, config: &PluginConfig) -> Result<Self, PluginLoadError> {
         let manifest_src = fs::read_to_string(dir.join("manifest.toml"))?;
         let manifest = PluginManifest::parse(&manifest_src)?;
         if manifest.extension_point != "content_analyzer" {
@@ -182,9 +260,11 @@ impl WasmContentAnalyzer {
                 expected: "content_analyzer".to_string(),
             });
         }
+        if config.disabled.contains(&manifest.name) {
+            return Err(PluginLoadError::Disabled(manifest.name));
+        }
         let wasm_bytes = fs::read(dir.join("plugin.wasm"))?;
-        let plugin = extism::Plugin::new(&wasm_bytes, [], true)
-            .map_err(|e| PluginLoadError::Wasm(e.to_string()))?;
+        let plugin = build_plugin(&wasm_bytes, config)?;
         Ok(Self {
             manifest,
             plugin: Mutex::new(plugin),
@@ -221,4 +301,31 @@ impl WasmContentAnalyzer {
             .map_err(|e| AnalyzeError::Wasm(e.to_string()))?;
         Ok(serde_json::from_str(&raw)?)
     }
+}
+
+/// Loads every plugin subdirectory of `root` as a `WasmContentAnalyzer` —
+/// see [`discover_unpackers`].
+pub fn discover_content_analyzers(
+    root: &Path,
+    config: &PluginConfig,
+) -> (Vec<WasmContentAnalyzer>, Vec<PluginLoadReport>) {
+    let mut loaded = Vec::new();
+    let mut failures = Vec::new();
+    let Ok(entries) = fs::read_dir(root) else {
+        return (loaded, failures);
+    };
+    for entry in entries.flatten() {
+        let dir = entry.path();
+        if !dir.is_dir() {
+            continue;
+        }
+        match WasmContentAnalyzer::load_with_config(&dir, config) {
+            Ok(plugin) => loaded.push(plugin),
+            Err(e) => failures.push(PluginLoadReport {
+                dir,
+                error: e.to_string(),
+            }),
+        }
+    }
+    (loaded, failures)
 }

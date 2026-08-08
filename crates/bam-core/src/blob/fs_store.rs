@@ -13,6 +13,7 @@ use super::{BlobError, BlobHash, BlobStore};
 
 static TMP_COUNTER: AtomicU64 = AtomicU64::new(0);
 
+#[derive(Clone)]
 pub struct FsBlobStore {
     root: PathBuf,
 }
