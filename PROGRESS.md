@@ -334,6 +334,30 @@ them is free, same as noted last round. Phase 9 exit needs both closed.
 
 ---
 
+## Round 49 — 2026-08-08 · Phase 9: timeline visualization (P9.5)
+
+`PackageTimeline.vue`: uploads per year for the active query, fetched through
+the same `client.searchPackages({ predicate })` call `PackageList.vue`
+already uses — no new backend or generated types needed, `Package` already
+carries `uploaded_on` and `date_precision` (P1.2). Each year renders as two
+stacked segments, `precision-exact` and `precision-week`, so a `week`-precision
+point (INDEX-derived, ±1 week) is never drawn as though it were exact — the
+one constraint the phase doc called out by name.
+
+All three of P9.5's tests hold: a four-package fixture spanning 2023–2026
+buckets correctly by year, including a year with zero uploads producing no
+bar; `exact` and `week` bars carry distinct CSS classes; and the timeline
+re-fetches through the injected `predicate` prop rather than reading the
+whole archive. 236 Rust tests (unchanged), 26 frontend tests (4 added), no
+new dependency, no workflow changes.
+
+**Next:** P9.6, per-archive content visualization — the last Phase 9 item.
+Renders P5.8's inventory payload (file types, sizes, directory structure)
+with a "not analyzed" state when no inventory exists yet. Phase 9 exit
+follows once it closes.
+
+---
+
 ## Decisions carried forward
 
 The eight architectural invariants are stated in full in
