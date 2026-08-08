@@ -214,12 +214,39 @@ passing total, up from 220. `cargo fmt`, `cargo clippy --workspace
 --all-targets --features native -- -D warnings`, and the wasm32
 `--no-default-features` build are all clean.
 
-## Next task
+## Round 43 — 2026-08-08 · Phase 6: launch a selection (P6.4, Phase 6 exit)
 
-Phase 6 continues with **P6.4** (launch a selection, iterating I7's
-selection API through the `Launcher` registry with continue-on-failure —
-`S`). See [phase-6-launchers.md](docs/plan/phase-6-launchers.md) for its
-test list.
+`crates/bam-core/src/store/launch_selection.rs` adds `launch_selection`:
+given `package_ids` (resolving a selection to ids stays the caller's job,
+same division of labor as P7.5's `summaries::run_batch`), it resolves each
+member's cached archive (`tables::get_archive_hash` plus a 16-byte
+`BlobStore::get` read into `unpack::detect_format` — no need to read a whole
+archive twice when the chosen `Launcher` re-reads it fully anyway), asks the
+P6.1 `LauncherRegistry` to launch it, sequentially, and continues past a
+per-member failure rather than aborting the batch. `package_ids.len() >
+threshold` without `confirmed: true` errors
+`LaunchSelectionError::ConfirmationRequired` before anything launches — the
+same structural gate `summaries::run_batch` uses for its cost estimate,
+here over a plain count instead of a token estimate. `cancel:
+&CancellationToken` is checked before each member, so a mid-batch cancel
+stops cleanly and `LaunchSelectionOutcome` still reports what ran. Lives at
+the `store::` level, not wired into `bam_core::api`, since nothing else at
+that layer needs it yet — `summaries`/`embeddings` are free functions for
+the same reason (I1's rusqlite confinement is what forces `store::`, not
+the API layer's session-scoped contract).
+
+4 new tests in `tests/launch_selection.rs` (the phase doc's four) — 229
+passing total, up from 225. `cargo fmt`, `cargo clippy --workspace
+--all-targets --features native -- -D warnings`, and the wasm32
+`--no-default-features` build are all clean.
+
+**Phase 6 exit reached** on the core side: a selection's cached archives
+launch through a pluggable, capability-driven registry with
+continue-on-failure and a confirmation gate. Wiring an actual TUI keybinding
+(`S`) to this function is unscheduled follow-on work, not blocking — the
+phase doc's four P6.4 tests target the core batch behavior only.
+
+## Next task
 
 Phases 8 and 9 remain open and unscheduled behind Phase 6 (additive,
 resequenceable per `IMPLEMENTATION_PLAN.md`'s phase table) — Phase 8 is the

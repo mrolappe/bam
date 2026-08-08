@@ -16,6 +16,7 @@ pub mod fts;
 pub mod ingest;
 pub mod inventory;
 pub mod land;
+pub mod launch_selection;
 mod migrations;
 pub mod normalize;
 pub mod recent;
