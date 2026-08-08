@@ -25,10 +25,7 @@ impl<'a, C: HttpClient> OpenAiCompatibleProvider<'a, C> {
     }
 
     fn headers(&self) -> Vec<(String, String)> {
-        let mut headers = vec![(
-            "Content-Type".to_string(),
-            "application/json".to_string(),
-        )];
+        let mut headers = vec![("Content-Type".to_string(), "application/json".to_string())];
         if let Some(key) = &self.config.api_key {
             headers.push(("Authorization".to_string(), format!("Bearer {key}")));
         }
@@ -82,9 +79,7 @@ impl<'a, C: HttpClient> LlmProvider for OpenAiCompatibleProvider<'a, C> {
         resp["choices"][0]["message"]["content"]
             .as_str()
             .map(str::to_string)
-            .ok_or_else(|| {
-                LlmError::InvalidResponse("missing choices[0].message.content".into())
-            })
+            .ok_or_else(|| LlmError::InvalidResponse("missing choices[0].message.content".into()))
     }
 
     async fn embed(&self, texts: &[String]) -> Result<Vec<Vec<f32>>, LlmError> {

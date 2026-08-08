@@ -52,7 +52,9 @@ fn worked_examples_validate_against_gbnf_and_json_schema() {
     for text in worked_example_texts() {
         assert!(gbnf_accepts(text), "GBNF should accept {text:?}\n{gbnf}");
 
-        let pred = lang.parse(text, &reg).unwrap_or_else(|e| panic!("{text:?}: {e}"));
+        let pred = lang
+            .parse(text, &reg)
+            .unwrap_or_else(|e| panic!("{text:?}: {e}"));
         let json = serde_json::to_value(&pred).unwrap();
         assert!(
             json_schema_accepts(&schema, &json),

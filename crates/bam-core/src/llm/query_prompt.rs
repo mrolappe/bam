@@ -16,7 +16,10 @@ use super::{CompletionRequest, GrammarSupport, LlmError, LlmProvider};
 /// — unlike categories, this doesn't vary per mirror snapshot, so it's
 /// hardcoded rather than threaded in as configuration.
 const FILE_TYPES: &[(&str, &str)] = &[
-    ("lha", "LHA-compressed archive, the most common Aminet format"),
+    (
+        "lha",
+        "LHA-compressed archive, the most common Aminet format",
+    ),
     ("lzx", "LZX-compressed archive"),
     ("zip", "ZIP archive"),
     ("readme", "plain-text description of the package"),

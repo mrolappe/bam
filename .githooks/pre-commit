@@ -1,0 +1,4 @@
+#!/bin/sh
+# Auto-formats staged Rust files so CI's `cargo fmt --check` never fails.
+cargo fmt
+git diff --name-only --diff-filter=ACM -- '*.rs' | xargs -r git add

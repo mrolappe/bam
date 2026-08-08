@@ -47,7 +47,13 @@ fn insert_readme(conn: &Connection, package_id: i64, url: &str, text: &str) {
 
 fn search_ids(conn: &Connection, term: &str) -> Vec<i64> {
     let reg = FieldRegistry::new(bam_core::query::registry::package_fields());
-    let query = compile(&Predicate::FullText(term.to_string()), &reg, None, &HashMap::new()).unwrap();
+    let query = compile(
+        &Predicate::FullText(term.to_string()),
+        &reg,
+        None,
+        &HashMap::new(),
+    )
+    .unwrap();
     let mut stmt = conn.prepare(&query.sql).unwrap();
     let mut ids: Vec<i64> = stmt
         .query_map(rusqlite::params_from_iter(&query.params), |row| row.get(0))

@@ -50,7 +50,9 @@ pub trait HttpClient {
     /// [`ReqwestClient`] and P7.1's LLM test fakes) override it.
     async fn post(&self, req: HttpPostRequest) -> Result<HttpResponse, HttpError> {
         let _ = req;
-        Err(HttpError::Request("this client does not support POST".into()))
+        Err(HttpError::Request(
+            "this client does not support POST".into(),
+        ))
     }
 }
 

@@ -119,7 +119,12 @@ async fn embedding_is_batched_far_fewer_calls_than_packages() {
     let conn = bam_core::store::open(":memory:").unwrap();
     let landing = landing_id(&conn);
     for i in 0..100 {
-        package_with_readme(&conn, landing, &format!("dir/pkg{i}"), &format!("readme text {i}"));
+        package_with_readme(
+            &conn,
+            landing,
+            &format!("dir/pkg{i}"),
+            &format!("readme text {i}"),
+        );
     }
 
     let provider = FakeProvider::new(4);
@@ -142,7 +147,14 @@ async fn an_interrupted_run_resumes_without_re_embedding() {
     let conn = bam_core::store::open(":memory:").unwrap();
     let landing = landing_id(&conn);
     let ids: Vec<i64> = (0..10)
-        .map(|i| package_with_readme(&conn, landing, &format!("dir/pkg{i}"), &format!("readme {i}")))
+        .map(|i| {
+            package_with_readme(
+                &conn,
+                landing,
+                &format!("dir/pkg{i}"),
+                &format!("readme {i}"),
+            )
+        })
         .collect();
 
     // "Interrupted": only one batch runs, covering half the backlog.
@@ -151,7 +163,11 @@ async fn an_interrupted_run_resumes_without_re_embedding() {
     assert_eq!(first.embedded, 5);
     let embedded_after_first: usize = ids
         .iter()
-        .filter(|id| tables::get_package_embedding(&conn, **id).unwrap().is_some())
+        .filter(|id| {
+            tables::get_package_embedding(&conn, **id)
+                .unwrap()
+                .is_some()
+        })
         .count();
     assert_eq!(embedded_after_first, 5);
 
@@ -184,7 +200,13 @@ async fn a_dimension_change_is_reported_not_silently_stored() {
     let big = FakeProvider::new(4);
     let err = run_batch(&conn, &big, "model-v2", 1).await.unwrap_err();
     assert!(
-        matches!(err, EmbedError::DimensionMismatch { expected: 3, actual: 4 }),
+        matches!(
+            err,
+            EmbedError::DimensionMismatch {
+                expected: 3,
+                actual: 4
+            }
+        ),
         "got: {err:?}"
     );
 }
@@ -223,11 +245,18 @@ async fn similar_finds_a_semantic_match_that_keyword_search_misses() {
     // match: `target_text` shares no words with `query`.
     rebuild_fts(&conn).unwrap();
     let reg = FieldRegistry::new(package_fields());
-    let keyword = compile(&Predicate::FullText(query.to_string()), &reg, None, &HashMap::new())
-        .unwrap();
+    let keyword = compile(
+        &Predicate::FullText(query.to_string()),
+        &reg,
+        None,
+        &HashMap::new(),
+    )
+    .unwrap();
     let mut stmt = conn.prepare(&keyword.sql).unwrap();
     let keyword_ids: Vec<i64> = stmt
-        .query_map(rusqlite::params_from_iter(keyword.params.iter()), |r| r.get(0))
+        .query_map(rusqlite::params_from_iter(keyword.params.iter()), |r| {
+            r.get(0)
+        })
         .unwrap()
         .map(Result::unwrap)
         .collect();
@@ -247,7 +276,9 @@ async fn similar_finds_a_semantic_match_that_keyword_search_misses() {
     let compiled = compile(&pred, &reg, None, &vectors).unwrap();
     let mut stmt = conn.prepare(&compiled.sql).unwrap();
     let similar_ids: Vec<i64> = stmt
-        .query_map(rusqlite::params_from_iter(compiled.params.iter()), |r| r.get(0))
+        .query_map(rusqlite::params_from_iter(compiled.params.iter()), |r| {
+            r.get(0)
+        })
         .unwrap()
         .map(Result::unwrap)
         .collect();

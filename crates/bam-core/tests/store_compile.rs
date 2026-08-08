@@ -485,5 +485,9 @@ fn similar_compiles_and_filters_by_threshold() {
         .map(Result::unwrap)
         .collect();
 
-    assert_eq!(ids, vec![b], "only the near-identical vector passes threshold 0.5");
+    assert_eq!(
+        ids,
+        vec![b],
+        "only the near-identical vector passes threshold 0.5"
+    );
 }

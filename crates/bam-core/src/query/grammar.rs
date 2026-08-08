@@ -180,7 +180,11 @@ fn render(node: &Node) -> String {
         Node::Lit(s) => format!("{s:?}"),
         Node::Ref(name) => (*name).to_string(),
         Node::Class(text, _) => (*text).to_string(),
-        Node::Seq(items) => items.iter().map(render_grouped).collect::<Vec<_>>().join(" "),
+        Node::Seq(items) => items
+            .iter()
+            .map(render_grouped)
+            .collect::<Vec<_>>()
+            .join(" "),
         Node::Alt(items) => items
             .iter()
             .map(render_grouped)
@@ -398,7 +402,9 @@ fn schema_accepts(schema: &Json, instance: &Json, root: &Json) -> bool {
     }
     if let Some(items_schema) = schema.get("items") {
         return match instance.as_array() {
-            Some(arr) => arr.iter().all(|item| schema_accepts(items_schema, item, root)),
+            Some(arr) => arr
+                .iter()
+                .all(|item| schema_accepts(items_schema, item, root)),
             None => false,
         };
     }

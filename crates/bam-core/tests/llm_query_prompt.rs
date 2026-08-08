@@ -32,7 +32,12 @@ impl FakeProvider {
 impl LlmProvider for FakeProvider {
     async fn complete(&self, req: CompletionRequest) -> Result<String, LlmError> {
         self.prompts.lock().unwrap().push(req.prompt);
-        Ok(self.completions.lock().unwrap().pop().expect("no scripted completion left"))
+        Ok(self
+            .completions
+            .lock()
+            .unwrap()
+            .pop()
+            .expect("no scripted completion left"))
     }
 
     async fn embed(&self, _texts: &[String]) -> Result<Vec<Vec<f32>>, LlmError> {
@@ -72,7 +77,10 @@ const NL_TO_DSL_CASES: &[(&str, &str)] = &[
     ("large demos over 5 megabytes", "dir:demo/* size>5M"),
     ("utilities uploaded after 2015", "dir:util/* year>2015"),
     ("everything I've marked", "marked"),
-    ("mentions Mustermann in the description", "description:~Mustermann"),
+    (
+        "mentions Mustermann in the description",
+        "description:~Mustermann",
+    ),
     ("games directory", "dir:game/*"),
     ("business software", "dir:biz/*"),
     ("anything not util", "!dir:util/*"),
@@ -113,9 +121,10 @@ async fn json_schema_path_round_trips_through_predicate() {
     .unwrap();
     let provider = FakeProvider::new(GrammarSupport::JsonSchema, vec![&json]);
 
-    let out = bam_core::llm::generate_query(&provider, &lang, &reg, &cats, "music from the nineties")
-        .await
-        .unwrap();
+    let out =
+        bam_core::llm::generate_query(&provider, &lang, &reg, &cats, "music from the nineties")
+            .await
+            .unwrap();
 
     assert_eq!(out, "year<2000");
 }
