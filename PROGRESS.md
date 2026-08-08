@@ -155,6 +155,25 @@ extism WASM plugin host) is the only unclosed phase left in the plan.
 
 ---
 
+## Round 51 — 2026-08-08 · Phase 8: contract versioning and manifest schema (P8.1)
+
+`bam_core::plugin` module: `PluginManifest` (TOML, per §9's `name`/`version`/
+`api_version`/`extension_point`/`claims` shape) with `HOST_API_VERSION = 1`
+rejected-on-mismatch checking, single-wildcard `claims` glob matching, and
+`contract_schema()` generating a `schemars`-derived JSON Schema per
+extension point (`content_analyzer` wired now; others return `None` until
+their input types exist). Host-independent — no `#[cfg(feature = "native")]`
+gate — so it compiles under `--no-default-features` on `wasm32-unknown-unknown`
+same as the rest of I1. 6 tests added (248 total): known/rejected
+`api_version`, a malformed manifest naming its missing field, `claims`
+filtering, and the schema/type round-trip.
+
+**Next:** P8.2, the extism host loading a WASM module through the existing
+registries (`UnpackerRegistry` et al.) with no call-site change — the task
+that proves or disproves invariant I4 for a plugin backend.
+
+---
+
 ## Decisions carried forward
 
 The eight architectural invariants are stated in full in

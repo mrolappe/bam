@@ -7,6 +7,7 @@ pub mod http;
 pub mod ingest;
 pub mod launch;
 pub mod llm;
+pub mod plugin;
 pub mod progress;
 pub mod query;
 pub mod ratelimit;
